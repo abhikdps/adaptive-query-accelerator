@@ -1,0 +1,2 @@
+Checks: '*,-fuchsia-*,-google-readability-todo,-llvmlibc-*'
+WarningsAsError: '*'
