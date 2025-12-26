@@ -19,6 +19,20 @@ cmake ..
 cmake --build .
 ```
 
+## Run
+
+To run the executable:
+
+```bash
+./src/app # from the /build directory
+```
+
+OR
+
+```bash
+./buils/src/app # from the root directory
+```
+
 ## Test
 
 To test, run:

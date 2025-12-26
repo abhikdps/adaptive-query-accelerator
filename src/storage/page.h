@@ -1,5 +1,5 @@
 #ifndef ADAPTIVE_QUERY_ACCELERATOR_PAGE_H
-#define ADAPYIVE_QUERY_ACCELERATOR_PAGE_H
+#define ADAPTIVE_QUERY_ACCELERATOR_PAGE_H
 
 #include <cstdint>
 #include <cstring>

@@ -16,7 +16,7 @@ namespace aqa {
             //descructor
             ~StorageEngine();
 
-            void write_page(uint32_t page_id, Page& page);
+            void write_page(uint32_t page_id, const Page& page);
             bool read_page(uint32_t page_id, Page& out_page);
             uint32_t get_total_pages();
             void reset_file();
