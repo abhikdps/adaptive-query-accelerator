@@ -21,16 +21,16 @@ cmake --build .
 
 ## Run
 
-To run the executable:
+To generate the data:
 
 ```bash
-./src/app # from the /build directory
+./src/app generate 5 # from the /build directory
 ```
 
-OR
+To read the data:
 
 ```bash
-./buils/src/app # from the root directory
+./src/app read 3 # from the /build directory
 ```
 
 ## Test
