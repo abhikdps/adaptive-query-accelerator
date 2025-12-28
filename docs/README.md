@@ -24,7 +24,7 @@ cmake --build .
 To generate the data:
 
 ```bash
-./src/app generate 5 # from the /build directory
+./src/app generate 10000 # from the /build directory
 ```
 
 To read the data:
@@ -32,6 +32,22 @@ To read the data:
 ```bash
 ./src/app read 3 # from the /build directory
 ```
+
+To run sequential benchmark:
+
+```bash
+./src/app benchmark seq 10000 # from the /build directory
+```
+
+To run random benchmark:
+
+```bash
+./src/app benchmark rnd 10000 # from the /build directory
+```
+
+### Expected Result
+
+Sequential is significantly faster than Random access because standard HDDs/SSDs and OS file readahead optimize for sequential patterns while random access incurs more seeking overhead (especially on HDDs) or IOPS limits (on SSDs).
 
 ## Test
 
