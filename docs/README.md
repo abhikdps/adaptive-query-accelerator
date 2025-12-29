@@ -45,6 +45,12 @@ To run random benchmark:
 ./src/app benchmark rnd 10000 # from the /build directory
 ```
 
+To run the benchmark:
+
+```bash
+./baseline_benchmark # from the /build directory
+```
+
 ### Expected Result
 
 Sequential is significantly faster than Random access because standard HDDs/SSDs and OS file readahead optimize for sequential patterns while random access incurs more seeking overhead (especially on HDDs) or IOPS limits (on SSDs).
