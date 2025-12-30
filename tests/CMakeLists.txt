@@ -1,7 +1,6 @@
-include(GoogleTest)
+add_executable(unit_tests mapped_file_test.cpp)
 
-add_executable(unit_tests test_main.cpp)
+target_link_libraries(unit_tests PRIVATE core_lib)
+target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-target_link_libraries(unit_tests GTest::gtest_main core_lib)
-
-gtest_discover_tests(unit_tests)
+add_test(NAME MappedFileTest COMMAND unit_tests)
