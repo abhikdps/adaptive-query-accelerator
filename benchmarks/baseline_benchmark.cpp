@@ -53,7 +53,7 @@ class BenchmarkHarness {
             std::uniform_int_distribution<uint32_t> dist(0, config_.total_pages - 1);
             for(auto& idx : random_indices) idx = dist(gen);
 
-            run_benchmark("Random Access", [&](StorageEngine& db) {
+            run_benchmark("Random_Access", [&](StorageEngine& db) {
                 Page p;
                 for (uint32_t idx : random_indices) {
                     db.read_page(idx, p);
