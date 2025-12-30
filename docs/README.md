@@ -48,7 +48,7 @@ To run random benchmark:
 To run the benchmark:
 
 ```bash
-./baseline_benchmark # from the /build directory
+./benchmarks/baseline_benchmark # from the /build directory
 ```
 
 ### Expected Result

@@ -31,6 +31,8 @@ The following Parameters were used to establish the control group. All reads wer
 | **Throughput** | 524937.773 pages/sec | 502226.546 pages/sec |
 | **Bandwidth** | 2050.538 MB/s | 1961.822 MB/s |
 
+***Note:** Dataset (~40MB) fits entirely in OS Page Cache. Results reflect RAM-cached I/O performance, not raw Disk I/O.*
+
 ## 4. Analysis and Observations
 
 * **Sequential Access:** The OS filesytem cache and hardware prefetching likely aided performance here, resulting in lower latency even without application buffering.
