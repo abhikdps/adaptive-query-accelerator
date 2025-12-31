@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         int page_id = std::stoi(argv[2]);
-        aqa::Page p;
+        aqa::RawPage p;
         if (db.read_page(page_id, p)) {
             uint32_t* data = reinterpret_cast<uint32_t*>(p.payload);
             std::cout << "Page " << page_id << " read successfully" << std::endl;

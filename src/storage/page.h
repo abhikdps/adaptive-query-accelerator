@@ -3,7 +3,8 @@
 
 #include <cstdint>
 #include <cstring>
-#include <type_traits>
+#include <span>
+#include <stdexcept>
 
 namespace aqa {
     // Page size
@@ -26,26 +27,64 @@ namespace aqa {
 
     static_assert(sizeof(PageHeader) == 64, "PageHeader must be 64 bytes");
 
-    struct Page {
+    struct alignas(PAGE_SIZE) RawPage {
         PageHeader header;
+        uint8_t payload[PAGE_SIZE- sizeof(PageHeader)];
 
-        uint8_t payload[PAGE_SIZE - sizeof(PageHeader)];
-
-        Page() {
+        RawPage() {
             reset();
         }
 
         void reset() {
-            std::memset(this, 0, PAGE_SIZE);
+            std::memset(this, 0,PAGE_SIZE);
             header.magic = PAGE_MAGIC;
-            header.next_page_id = 0xFFFFFFFF; // invalid id
-            header.prev_page_id = 0xFFFFFFFF; // invalid id
-            header.free_space_start = 0;
-            header.free_space_end = sizeof(payload);
         }
     };
 
-    static_assert(sizeof(Page) == PAGE_SIZE, "Page struct must match configured PAGE_SIZE");
+    static_assert(sizeof(RawPage) == PAGE_SIZE, "RawPage must be 4KB");
+
+    class Page {
+        public:
+            static constexpr size_t PAYLOAD_SIZE = sizeof(RawPage::payload);
+
+            explicit Page(RawPage* ptr) : ptr_(ptr) {
+                if (!ptr_) {
+                    throw std::runtime_error("Page initialized with nullptr");
+                }
+            }
+
+            [[nodiscard]] uint32_t get_id() const {
+                return ptr_->header.page_id;
+            }
+
+            [[nodiscard]] const PageHeader& get_header() const {
+                return ptr_->header;
+            }
+
+            [[nodiscard]] std::span<const uint8_t> get_payload() const {
+                return {ptr_->payload, PAYLOAD_SIZE};
+            }
+
+            [[nodiscard]] bool is_valid() const {
+                return ptr_->header.magic == PAGE_MAGIC;
+            }
+
+            PageHeader& get_header_mut() {
+                return ptr_->header;
+            }
+
+            std::span<uint8_t> get_payload_mut() {
+                return {ptr_->payload, PAYLOAD_SIZE};
+            }
+
+            void reset() {
+                std::memset(ptr_, 0, PAGE_SIZE);
+                ptr_->header.magic = PAGE_MAGIC;
+            }
+
+        private:
+            RawPage* ptr_;
+    };
 }
 
 #endif

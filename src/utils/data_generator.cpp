@@ -11,7 +11,7 @@ namespace aqa {
         engine_.reset_file();
 
         for (uint32_t i = 0; i < count; ++i) {
-            Page page;
+            RawPage page;
             page.reset();
 
             page.header.page_id = i;
@@ -29,7 +29,7 @@ namespace aqa {
         std::cout << "Finished generating " << count << " pages." << std::endl;
     }
 
-    void DataGenerator::fill_page_payload(uint32_t page_id, Page& page) {
+    void DataGenerator::fill_page_payload(uint32_t page_id, RawPage& page) {
         uint32_t* raw_data = reinterpret_cast<uint32_t*>(page.payload);
         size_t max_intergers = sizeof(page.payload) / sizeof(uint32_t);
 

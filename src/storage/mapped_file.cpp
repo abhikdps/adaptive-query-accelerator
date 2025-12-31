@@ -57,9 +57,9 @@ namespace aqa {
         }
     }
 
-    Page* MappedFile::get_page(uint32_t page_id) {
+    RawPage* MappedFile::get_page(uint32_t page_id) {
         uint8_t* byte_ptr= static_cast<uint8_t*>(data_);
-        return reinterpret_cast<Page*>(byte_ptr + (page_id * PAGE_SIZE));
+        return reinterpret_cast<RawPage*>(byte_ptr + (page_id * PAGE_SIZE));
     }
 
     void MappedFile::grow_file(uint32_t new_page_count) {

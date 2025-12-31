@@ -15,7 +15,7 @@ namespace aqa {
             MappedFile(const MappedFile&) = delete;
             MappedFile& operator=(const MappedFile&) = delete;
 
-            Page* get_page(uint32_t page_id);
+            RawPage* get_page(uint32_t page_id);
 
             void grow_file(uint32_t new_page_count);
 

@@ -60,5 +60,5 @@ Sequential is significantly faster than Random access because standard HDDs/SSDs
 To test, run:
 
 ```bash
-ctest --output-on-failure
+ctest --test-dir build/ --output-on-failure # from the root of the project
 ```

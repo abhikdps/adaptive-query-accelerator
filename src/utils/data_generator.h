@@ -16,7 +16,7 @@ namespace aqa {
             StorageEngine& engine_;
             uint32_t seed_;
 
-            void fill_page_payload(uint32_t page_id, Page& page);
+            void fill_page_payload(uint32_t page_id, RawPage& page);
     };
 }
 

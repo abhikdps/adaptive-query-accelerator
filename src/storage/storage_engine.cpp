@@ -28,7 +28,7 @@ namespace aqa {
         }
     }
 
-    void StorageEngine::write_page(uint32_t page_id, const Page& page) {
+    void StorageEngine::write_page(uint32_t page_id, const RawPage& page) {
         file_stream_.clear();
 
         std::streampos offset = static_cast<std::streampos>(page_id) * PAGE_SIZE;
@@ -47,7 +47,7 @@ namespace aqa {
         }
     }
 
-    bool StorageEngine::read_page(uint32_t page_id, Page& out_page) {
+    bool StorageEngine::read_page(uint32_t page_id, RawPage& out_page) {
         file_stream_.clear();
 
         std::streampos offset = static_cast<std::streampos>(page_id) * PAGE_SIZE;

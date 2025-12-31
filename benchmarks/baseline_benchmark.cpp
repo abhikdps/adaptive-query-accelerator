@@ -42,7 +42,7 @@ class BenchmarkHarness {
             std::cout << "------------------------------------------" << std::endl;
 
             run_benchmark("Sequential_Scan", [&](StorageEngine& db) {
-                Page p;
+                RawPage p;
                 for (uint32_t i = 0; i < config_.read_count; ++i) {
                     db.read_page(i % config_.total_pages, p);
                 }
@@ -54,7 +54,7 @@ class BenchmarkHarness {
             for(auto& idx : random_indices) idx = dist(gen);
 
             run_benchmark("Random_Access", [&](StorageEngine& db) {
-                Page p;
+                RawPage p;
                 for (uint32_t idx : random_indices) {
                     db.read_page(idx, p);
                 }

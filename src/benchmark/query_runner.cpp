@@ -11,7 +11,7 @@ namespace aqa {
     void QueryRunner::run_sequential_scan(uint32_t count) {
         std::cout << "Running sequential scan of " << count << " pages.." << std::endl;
 
-        Page p;
+        RawPage p;
         auto start = std::chrono::high_resolution_clock::now();
 
         for (uint32_t i = 0; i < count; ++i) {
@@ -34,7 +34,7 @@ namespace aqa {
             page_ids[i] = dist(gen);
         }
 
-        Page p;
+        RawPage p;
         auto start = std::chrono::high_resolution_clock::now();
 
         for (uint32_t id : page_ids) {
