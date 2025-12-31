@@ -14,9 +14,8 @@ AQA(Adaptive Query Accelerator) sits between the database storage layer and the 
 To build the project, run:
 
 ```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
+cmake -B build
+cmake --build build
 ```
 
 ## Run
@@ -24,31 +23,31 @@ cmake --build .
 To generate the data:
 
 ```bash
-./src/app generate 10000 # from the /build directory
+./build/src/app generate 10000
 ```
 
 To read the data:
 
 ```bash
-./src/app read 3 # from the /build directory
+./build/src/app read 3
 ```
 
 To run sequential benchmark:
 
 ```bash
-./src/app benchmark seq 10000 # from the /build directory
+./build/src/app benchmark seq 10000
 ```
 
 To run random benchmark:
 
 ```bash
-./src/app benchmark rnd 10000 # from the /build directory
+./build/src/app benchmark rnd 10000
 ```
 
 To run the benchmark:
 
 ```bash
-./benchmarks/baseline_benchmark # from the /build directory
+./build/benchmarks/baseline_benchmark
 ```
 
 ### Expected Result
@@ -60,5 +59,5 @@ Sequential is significantly faster than Random access because standard HDDs/SSDs
 To test, run:
 
 ```bash
-ctest --test-dir build/ --output-on-failure # from the root of the project
+ctest --test-dir build/ --output-on-failure
 ```
