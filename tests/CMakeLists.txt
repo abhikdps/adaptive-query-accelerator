@@ -5,3 +5,4 @@ target_include_directories(unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 add_test(NAME MappedFileTest COMMAND unit_tests)
 add_test(NAME PageUnitTest COMMAND unit_tests)
+add_test(NAME PageCacheTest COMMAND unit_tests)
