@@ -1,25 +1,58 @@
 #include "storage/page_cache.h"
 #include <iostream>
 #include <cstring>
+#include <stdexcept>
 
 namespace aqa {
+    PageHandle::PageHandle(PageCache* cache, Page page)
+        : cache_(cache), page_(page) {}
+
+    PageHandle::~PageHandle() {
+        if (cache_ && page_.is_valid()) {
+            cache_->unpin_page(page_.get_id());
+        }
+    }
+
+    PageHandle::PageHandle(PageHandle&& other) noexcept
+        : cache_(other.cache_), page_(other.page_) {
+            other.cache_ = nullptr;
+        }
+
+    PageHandle& PageHandle::operator=(PageHandle&& other) noexcept {
+        if (this != &other) {
+            if (cache_ && page_.is_valid()) {
+                cache_->unpin_page(page_.get_id());
+            }
+            cache_ = other.cache_;
+            page_ = other.page_;
+            other.cache_ = nullptr;
+        }
+        return *this;
+    }
+
     PageCache::PageCache(MappedFile& file, size_t capacity)
         : file_(file), capacity_(capacity) {
             pool_.resize(capacity);
+            pin_counts_.resize(capacity, 0);
             for (size_t i = 0; i < capacity; ++i) {
                 free_frames_.push_back(i);
             }
         }
 
-    Page PageCache::get_page(uint32_t page_id) {
+    PageHandle PageCache::fetch_page(uint32_t page_id) {
         std::lock_guard<std::mutex> lock(mutex_);
+        Page p = get_page_internal(page_id);
+        return PageHandle(this, p);
+    }
 
+    Page PageCache::get_page_internal(uint32_t page_id) {
         if (page_map_.find(page_id) != page_map_.end()) {
             hits_++;
             touch_page(page_id);
 
-            size_t frame_id = page_map_[page_id];
-            return Page(&pool_[frame_id]);
+            size_t frame = page_map_[page_id];
+            pin_counts_[frame]++;
+            return Page(&pool_[frame]);
         }
 
         misses_++;
@@ -39,7 +72,19 @@ namespace aqa {
         lru_list_.push_front(page_id);
         lru_iters_[page_id] = lru_list_.begin();
 
+        pin_counts_[frame_id] = 1;
+
         return Page(&pool_[frame_id]);
+    }
+
+    void PageCache::unpin_page(uint32_t page_id) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (page_map_.find(page_id) != page_map_.end()) {
+            size_t frame = page_map_[page_id];
+            if (pin_counts_[frame] > 0) {
+                pin_counts_[frame]--;
+            }
+        }
     }
 
     void PageCache::touch_page(uint32_t page_id) {
@@ -50,14 +95,21 @@ namespace aqa {
     }
 
     size_t PageCache::evict() {
-        uint32_t victim_page_id = lru_list_.back();
-        size_t frame_id = page_map_[victim_page_id];
+        for (auto it = lru_list_.rbegin(); it != lru_list_.rend(); ++it) {
+            uint32_t victim_id = *it;
+            size_t frame = page_map_[victim_id];
+            if (pin_counts_[frame] == 0) {
+                page_map_.erase(victim_id);
+                lru_iters_.erase(victim_id);
 
-        lru_list_.pop_back();
-        lru_iters_.erase(victim_page_id);
-        page_map_.erase(victim_page_id);
+                auto forward_it = std::next(it).base();
+                lru_list_.erase(forward_it);
 
-        return frame_id;
+                return frame;
+            }
+        }
+
+        throw std::runtime_error("Buffer Pool Full: All pages are pinned..");
     }
 
     void PageCache::flush_page(uint32_t page_id) {
@@ -80,5 +132,13 @@ namespace aqa {
         }
 
         file_.flush();
+    }
+
+    int PageCache::get_pin_count_for_test(uint32_t page_id) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (page_map_.count(page_id)) {
+            return pin_counts_[page_map_[page_id]];
+        }
+        return -1;
     }
 }
