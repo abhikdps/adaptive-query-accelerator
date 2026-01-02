@@ -11,6 +11,7 @@ namespace aqa {
             explicit DataGenerator(StorageEngine& engine, uint32_t seed = 42);
 
             void generate_pages(uint32_t count);
+            void fill_page_payload(uint32_t page_id, Page& page);
 
         private:
             StorageEngine& engine_;

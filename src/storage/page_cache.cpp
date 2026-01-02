@@ -1,48 +1,50 @@
 #include "storage/page_cache.h"
-#include <iostream>
 #include <cstring>
 #include <stdexcept>
 
 namespace aqa {
-    PageHandle::PageHandle(PageCache* cache, Page page)
-        : cache_(cache), page_(page) {}
+    PageHandle::PageHandle(PageCache* cache, Page page, uint32_t page_id)
+        : cache_(cache), page_(page), page_id_(page_id) {}
 
     PageHandle::~PageHandle() {
-        if (cache_ && page_.is_valid()) {
-            cache_->unpin_page(page_.get_id());
+        if (cache_) {
+            cache_->unpin_page(page_id_);
         }
     }
 
     PageHandle::PageHandle(PageHandle&& other) noexcept
-        : cache_(other.cache_), page_(other.page_) {
-            other.cache_ = nullptr;
-        }
+        : cache_(other.cache_), page_(other.page_), page_id_(other.page_id_) {
+        other.cache_ = nullptr;
+    }
 
     PageHandle& PageHandle::operator=(PageHandle&& other) noexcept {
         if (this != &other) {
-            if (cache_ && page_.is_valid()) {
-                cache_->unpin_page(page_.get_id());
+            if (cache_) {
+                cache_->unpin_page(page_id_);
             }
             cache_ = other.cache_;
             page_ = other.page_;
+            page_id_ = other.page_id_;
             other.cache_ = nullptr;
         }
         return *this;
     }
 
     PageCache::PageCache(MappedFile& file, size_t capacity)
-        : file_(file), capacity_(capacity) {
-            pool_.resize(capacity);
-            pin_counts_.resize(capacity, 0);
-            for (size_t i = 0; i < capacity; ++i) {
-                free_frames_.push_back(i);
-            }
+        : file_(file) {
+
+        pool_.resize(capacity);
+        pin_counts_.resize(capacity, 0);
+
+        for (size_t i = 0; i < capacity; ++i) {
+            free_frames_.push_back(i);
         }
+    }
 
     PageHandle PageCache::fetch_page(uint32_t page_id) {
         std::lock_guard<std::mutex> lock(mutex_);
         Page p = get_page_internal(page_id);
-        return PageHandle(this, p);
+        return PageHandle(this, p, page_id);
     }
 
     Page PageCache::get_page_internal(uint32_t page_id) {
@@ -99,6 +101,10 @@ namespace aqa {
             uint32_t victim_id = *it;
             size_t frame = page_map_[victim_id];
             if (pin_counts_[frame] == 0) {
+                RawPage* disk_data = file_.get_page(victim_id);
+                if (disk_data) {
+                    std::memcpy(disk_data, &pool_[frame], PAGE_SIZE);
+                }
                 page_map_.erase(victim_id);
                 lru_iters_.erase(victim_id);
 
@@ -126,9 +132,11 @@ namespace aqa {
 
     void PageCache::flush_all() {
         std::lock_guard<std::mutex> lock(mutex_);
-        for (auto const& [pid, fid] :  page_map_) {
+        for (auto const& [pid, fid] : page_map_) {
             RawPage* disk_data = file_.get_page(pid);
-            std::memcpy(disk_data, &pool_[fid], PAGE_SIZE);
+            if (disk_data) {
+                std::memcpy(disk_data, &pool_[fid], PAGE_SIZE);
+            }
         }
 
         file_.flush();
@@ -139,6 +147,6 @@ namespace aqa {
         if (page_map_.count(page_id)) {
             return pin_counts_[page_map_[page_id]];
         }
-        return -1;
+        return 0;
     }
 }

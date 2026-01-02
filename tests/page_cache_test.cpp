@@ -14,19 +14,19 @@ void test_lru_eviction() {
 
     aqa::PageCache cache(file, 2);
 
-    cache.get_page(0);
-    cache.get_page(1);
+    cache.fetch_page(0);
+    cache.fetch_page(1);
 
     ASSERT_EQ(cache.get_size(), 2);
     ASSERT_EQ(cache.get_misses(), 2);
 
-    cache.get_page(0);
+    cache.fetch_page(0);
     ASSERT_EQ(cache.get_hits(), 1);
 
-    cache.get_page(2);
+    cache.fetch_page(2);
 
     size_t misses_before = cache.get_misses();
-    cache.get_page(1);
+    cache.fetch_page(1);
     size_t misses_after = cache.get_misses();
 
     ASSERT_EQ(misses_after, misses_before + 1);

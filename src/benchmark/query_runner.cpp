@@ -15,7 +15,9 @@ namespace aqa {
         auto start = std::chrono::high_resolution_clock::now();
 
         for (uint32_t i = 0; i < count; ++i) {
-            engine_.read_page(i, p);
+            auto handle = engine_.fetch_page(i);
+            volatile uint32_t magic = handle->get_header().magic;
+            (void)magic;
         }
 
         auto end = std::chrono::high_resolution_clock::now();
@@ -38,7 +40,10 @@ namespace aqa {
         auto start = std::chrono::high_resolution_clock::now();
 
         for (uint32_t id : page_ids) {
-            engine_.read_page(id, p);
+            auto handle = engine_.fetch_page(id);
+
+            volatile uint32_t magic = handle->get_header().magic;
+            (void)magic;
         }
 
         auto end = std::chrono::high_resolution_clock::now();

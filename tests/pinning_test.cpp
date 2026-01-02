@@ -19,24 +19,22 @@ void test_pinning() {
         auto h0 = cache.fetch_page(0);
         ASSERT_EQ(cache.get_pin_count_for_test(0), 1);
 
-        auto h1 = cache.fetch_page(1);
-        ASSERT_EQ(cache.get_size(), 2);
-
-        ASSERT_THROWS(cache.fetch_page(2));
-
         {
-            auto h1_dup = std::move(h1);
+            auto h1 = cache.fetch_page(1);
             ASSERT_EQ(cache.get_pin_count_for_test(1), 1);
+            ASSERT_EQ(cache.get_size(), 2);
+
+            ASSERT_THROWS(cache.fetch_page(2));
         }
 
         ASSERT_EQ(cache.get_pin_count_for_test(1), 0);
         ASSERT_EQ(cache.get_pin_count_for_test(0), 1);
+
+        auto h2 = cache.fetch_page(2);
+        ASSERT_EQ(cache.get_size(), 2);
     }
 
     ASSERT_EQ(cache.get_pin_count_for_test(0), 0);
-
-    auto h2 = cache.fetch_page(2);
-    ASSERT_EQ(cache.get_size(), 2);
 
     std::cout << "[Pass] Pinning Logic Test" << std::endl;
     std::filesystem::remove(test_file);

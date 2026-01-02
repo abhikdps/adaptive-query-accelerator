@@ -8,9 +8,9 @@ namespace aqa {
 
     class PageHandle {
         public:
-            PageHandle() : cache_(nullptr), page_(nullptr) {}
+            PageHandle() : cache_(nullptr), page_(nullptr), page_id_(0) {}
 
-            PageHandle(PageCache* cache, Page page);
+            PageHandle(PageCache* cache, Page page, uint32_t page_id);
 
             ~PageHandle();
 
@@ -31,6 +31,7 @@ namespace aqa {
         private:
             PageCache* cache_;
             Page page_;
+            uint32_t page_id_;
     };
 }
 

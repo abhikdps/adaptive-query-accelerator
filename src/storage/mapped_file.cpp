@@ -5,13 +5,15 @@
 #include <unistd.h>
 #include <stdexcept>
 #include <cstring>
-#include <iostream>
+#include "storage/page.h"
 
 namespace aqa {
-    MappedFile::MappedFile(const std::string& path) : path_(path), fd_(-1), data_(nullptr), file_size_(0), page_count_(0) {
+    MappedFile::MappedFile(const std::string& path)
+        : path_(path), fd_(-1), data_(nullptr), file_size_(0), page_count_(0) {
+
         fd_ = open(path_.c_str(), O_RDWR | O_CREAT, 0644);
         if (fd_ == -1) {
-            throw std::runtime_error("Failed to oprn file: " + path_);
+            throw std::runtime_error("Failed to open file: " + path_);
         }
 
         struct stat sb;
@@ -20,15 +22,11 @@ namespace aqa {
             throw std::runtime_error("Failed to stat file: " + path_);
         }
         file_size_ = static_cast<size_t>(sb.st_size);
-
-        if (file_size_ == 0) {
-            grow_file(1);
-            return;
-        }
-
         page_count_ = file_size_ / PAGE_SIZE;
 
-        map_memory();
+        if (file_size_ > 0) {
+            map_memory();
+        }
     }
 
     MappedFile::~MappedFile() {
@@ -39,12 +37,12 @@ namespace aqa {
     }
 
     void MappedFile::map_memory() {
+        if (file_size_ == 0) return;
+
         data_ = mmap(nullptr, file_size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
 
         if (data_ == MAP_FAILED) {
             data_ = nullptr;
-            close(fd_);
-            fd_ = -1;
             throw std::runtime_error("mmap failed for file: " + path_);
         }
     }
@@ -58,7 +56,7 @@ namespace aqa {
     }
 
     RawPage* MappedFile::get_page(uint32_t page_id) {
-        uint8_t* byte_ptr= static_cast<uint8_t*>(data_);
+        uint8_t* byte_ptr = static_cast<uint8_t*>(data_);
         return reinterpret_cast<RawPage*>(byte_ptr + (page_id * PAGE_SIZE));
     }
 
@@ -67,11 +65,14 @@ namespace aqa {
 
         size_t new_size = new_page_count * PAGE_SIZE;
 
-        unmap_memory();
+        if (data_) {
+            unmap_memory();
+        }
 
         if (ftruncate(fd_, new_size) == -1) {
             throw std::runtime_error("Failed to resize file: " + path_);
         }
+        fsync(fd_);
 
         file_size_ = new_size;
         page_count_ = new_page_count;
@@ -84,6 +85,7 @@ namespace aqa {
             if (msync(data_, file_size_, MS_SYNC) == -1) {
                 throw std::runtime_error("msync failed");
             }
+            fsync(fd_);
         }
     }
 }

@@ -1,87 +1,39 @@
 #include "storage/storage_engine.h"
-#include <iostream>
 
 namespace aqa {
-    StorageEngine::StorageEngine(const std::string& file_path)
-        : file_path_(file_path) {
-            open_file_();
-        }
-
-    StorageEngine::~StorageEngine() {
-        if (file_stream_.is_open()) {
-            file_stream_.close();
-        }
+    StorageEngine::StorageEngine(const std::string& file_path, size_t cache_capacity) {
+        file_ = std::make_unique<MappedFile>(file_path);
+        cache_ = std::make_unique<PageCache>(*file_, cache_capacity);
     }
 
-    void StorageEngine::open_file_() {
-        file_stream_.open(file_path_, std::ios::in | std::ios::out | std::ios::binary);
-
-        if (!file_stream_.is_open()) {
-            std::fstream create_stream(file_path_, std::ios::out | std::ios::binary);
-            create_stream.close();
-
-            file_stream_.open(file_path_, std::ios::in | std::ios::out | std::ios::binary);
+    PageHandle StorageEngine::fetch_page(uint32_t page_id) {
+        if (page_id >= file_->get_page_count()) {
+            throw std::runtime_error("Page ID out of bounds: " + std::to_string(page_id));
         }
 
-        if (!file_stream_.is_open()) {
-            throw std::runtime_error("Failed to open database file: " + file_path_);
-        }
+        return cache_->fetch_page(page_id);
     }
 
-    void StorageEngine::write_page(uint32_t page_id, const RawPage& page) {
-        file_stream_.clear();
+    PageHandle StorageEngine::allocate_page() {
+        uint32_t new_page_id = file_->get_page_count();
+        file_->grow_file(new_page_id + 1);
 
-        std::streampos offset = static_cast<std::streampos>(page_id) * PAGE_SIZE;
+        PageHandle handle = cache_->fetch_page(new_page_id);
 
-        file_stream_.seekp(offset, std::ios::beg);
-        if (file_stream_.fail()) {
-            throw std::runtime_error("Failed to seek for write at page_id: " + std::to_string(page_id));
-        }
+        auto& header = handle->get_header_mut();
 
-        file_stream_.write(reinterpret_cast<const char*>(&page), PAGE_SIZE);
+        header.page_id = new_page_id;
+        header.magic = PAGE_MAGIC;
+        header.next_page_id = 0xFFFFFFFF;
 
-        file_stream_.flush();
-
-        if (file_stream_.fail()) {
-            throw std::runtime_error("Failed to write page_id: " + std::to_string(page_id));
-        }
+        return handle;
     }
 
-    bool StorageEngine::read_page(uint32_t page_id, RawPage& out_page) {
-        file_stream_.clear();
-
-        std::streampos offset = static_cast<std::streampos>(page_id) * PAGE_SIZE;
-
-        file_stream_.seekg(0, std::ios::end);
-        if (offset >= file_stream_.tellg()) {
-            return false;
-        }
-
-        file_stream_.seekg(offset, std::ios::beg);
-        file_stream_.read(reinterpret_cast<char*>(&out_page), PAGE_SIZE);
-
-        if (file_stream_.fail() && !file_stream_.eof()) {
-            return false;
-        }
-
-        return true;
+    void StorageEngine::flush_all() {
+        cache_->flush_all();
     }
 
-    uint32_t StorageEngine::get_total_pages() {
-        file_stream_.clear();
-        file_stream_.seekg(0, std::ios::end);
-        std::streampos file_size = file_stream_.tellg();
-
-        if (file_size < 0) return 0;
-        return static_cast<uint32_t>(file_size / PAGE_SIZE);
-    }
-
-    void StorageEngine::reset_file() {
-        file_stream_.close();
-
-        std::fstream trunc_stream(file_path_, std::ios::out | std::ios::binary | std::ios::trunc);
-        trunc_stream.close();
-
-        open_file_();
+    uint32_t StorageEngine::get_total_pages() const {
+        return file_->get_page_count();
     }
 }

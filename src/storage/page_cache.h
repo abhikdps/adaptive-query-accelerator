@@ -5,8 +5,7 @@
 #include <list>
 #include <unordered_map>
 #include <mutex>
-#include <memory>
-#include <optional>
+
 #include "storage/page.h"
 #include "storage/mapped_file.h"
 #include "storage/page_handle.h"
@@ -24,6 +23,7 @@ namespace aqa {
 
             size_t get_hits() const { return hits_; }
             size_t get_misses() const { return misses_; }
+            size_t get_capacity() const { return pool_.size(); }
             size_t get_size() const { return page_map_.size(); }
 
             int get_pin_count_for_test(uint32_t page_id);
@@ -35,7 +35,6 @@ namespace aqa {
             void unpin_page(uint32_t page_id);
 
             MappedFile& file_;
-            size_t capacity_;
 
             std::vector<RawPage> pool_;
             std::vector<int> pin_counts_;
