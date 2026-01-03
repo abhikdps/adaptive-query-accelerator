@@ -36,6 +36,38 @@ namespace aqa {
         }
     }
 
+    MappedFile::MappedFile(MappedFile&& other) noexcept
+        : path_(std::move(other.path_)),
+          fd_(other.fd_),
+          data_(other.data_),
+          file_size_(other.file_size_),
+          page_count_(other.page_count_) {
+
+            other.fd_ = -1;
+            other.data_ = nullptr;
+            other.file_size_ = 0;
+            other.page_count_ = 0;
+          }
+
+    MappedFile& MappedFile::operator=(MappedFile&& other) noexcept {
+        if (this != &other) {
+            unmap_memory();
+            if (fd_ == -1) close(fd_);
+
+            path_ = std::move(other.path_);
+            fd_ = other.fd_;
+            data_ = other.data_;
+            file_size_ = other.file_size_;
+            page_count_ = other.page_count_;
+
+            other.fd_ = -1;
+            other.data_ = nullptr;
+            other.file_size_ = 0;
+            other.page_count_ = 0;
+        }
+        return *this;
+    }
+
     void MappedFile::map_memory() {
         if (file_size_ == 0) return;
 

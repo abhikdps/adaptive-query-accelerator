@@ -8,6 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF) # force -std=c++20 instead of -std=gnu++20
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Enable ASAN for debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer -g)
+    add_link_options(-fsanitize=address)
+endif()
+
 # GoogleTest
 include(FetchContent)
 FetchContent_Declare(

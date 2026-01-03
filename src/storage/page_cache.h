@@ -15,6 +15,14 @@ namespace aqa {
         public:
             PageCache(MappedFile& file, size_t capacity);
 
+            // DELETE COPY: Cache is a singleton resource
+            PageCache(const PageCache&) = delete;
+            PageCache& operator=(const PageCache&) = delete;
+
+            // DELETE MOVE: Moving a cache while threads
+            PageCache(PageCache&&) = delete;
+            PageCache& operator=(PageCache&&) = delete;
+
             PageHandle fetch_page(uint32_t page_id);
 
             void flush_page(uint32_t page_id);

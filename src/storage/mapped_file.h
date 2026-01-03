@@ -12,8 +12,13 @@ namespace aqa {
             explicit MappedFile(const std::string& path);
             ~MappedFile();
 
+            // DELETE COPY: Prevents double-close of fd_ and double-munmap
             MappedFile(const MappedFile&) = delete;
             MappedFile& operator=(const MappedFile&) = delete;
+
+            // ALLOW MOVE: Transfer ownership of fd_ and data_ pointer
+            MappedFile(MappedFile&& other) noexcept;
+            MappedFile& operator=(MappedFile&& other) noexcept;
 
             RawPage* get_page(uint32_t page_id);
 
@@ -26,8 +31,8 @@ namespace aqa {
 
         private:
             std::string path_;
-            int fd_;
-            void* data_;
+            int fd_; // OWNS: File Descriptor
+            void* data_; // OWNS: Memory Map Region
             size_t file_size_;
             uint32_t page_count_;
 
