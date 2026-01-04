@@ -24,6 +24,7 @@ Testing/
 *.dylib
 *.exe
 *.out
+*.db
 
 .DS_Store
 

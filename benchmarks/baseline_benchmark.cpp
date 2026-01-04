@@ -1,111 +1,104 @@
+#include "storage/page.h"
 #include "storage/storage_engine.h"
+#include "naive_storage.h"
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
+#include <ratio>
 #include <vector>
 #include <chrono>
 #include <random>
+#include <iomanip>
 
 using namespace aqa;
 
 struct BenchmarkConfig {
     std::string db_path = "benchmark_data.db";
     uint32_t total_pages = 10000;
-    uint32_t read_batch_size = 1000;
-    int iterations = 10;
+    uint32_t ops_count = 50000;
+    size_t  cache_size = 1000;
 };
 
-void run_sequential_scan(StorageEngine& db, const BenchmarkConfig& config) {
-    std::cout << "Running warm up for Sequential_Scan..." << std::endl;
-    for (uint32_t i = 0; i < 100; ++i) {
-        auto h = db.fetch_page(i % config.total_pages);
-        (void)h;
-    }
+class Timer {
+    using Clock = std::chrono::high_resolution_clock;
+    Clock::time_point start_;
 
-    std::cout << "Running measurements for Sequential_Scan.." << std::endl;
-
-    std::vector<double> latencies;
-    auto start_total = std::chrono::high_resolution_clock::now();
-
-    for (int iter = 0; iter < config.iterations; ++iter) {
-        for (uint32_t i = 0; i < config.read_batch_size; ++i) {
-            auto handle = db.fetch_page(i % config.total_pages);
-
-            volatile uint32_t magic = handle->get_header().magic;
-            (void)magic;
+    public:
+        Timer() : start_(Clock::now()) {}
+        double elapsed_ms() {
+            auto end = Clock::now();
+            return std::chrono::duration<double, std::milli>(end - start_).count();
         }
+};
+
+void bench_naive_random(const BenchmarkConfig& config, const std::vector<uint32_t>& indices) {
+    NaiveStorage store(config.db_path);
+    RawPage buffer;
+
+    Timer t;
+    for (uint32_t idx : indices) {
+        store.read_page(idx, buffer);
+        volatile uint32_t magic = buffer.header.magic;
+        (void)magic;
     }
+    double ms = t.elapsed_ms();
 
-    auto end_total = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> total_ms = end_total - start_total;
-
-    double total_reads = config.read_batch_size * config.iterations;
-    double avg_latency = (total_ms.count() * 1000) / total_reads;
-    double throughput = total_reads / (total_ms.count() / 1000.0);
-
-    std::cout << "Results [Sequential_Scan]:" << std::endl;
-    std::cout << "  Avg Total Time: " << total_ms.count() << " ms" << std::endl;
-    std::cout << "  Avg Latency:    " << avg_latency << " us/page" << std::endl;
-    std::cout << "  Throughput:     " << throughput << " pages/sec" << std::endl << std::endl;
+    std::cout << " [Naive IO]   Time: " << std::setw(8) << ms << " ms | "
+              << "Throughput: " << std::setw(8) << (config.ops_count / (ms/1000.0)) << " ops/s" << std::endl;
 }
 
-void run_random_access(StorageEngine& db, const BenchmarkConfig& config) {
-    std::mt19937 gen(42);
-    std::uniform_int_distribution<uint32_t> dist(0, config.total_pages - 1);
+void bench_optimized_random(const BenchmarkConfig& config, const std::vector<uint32_t>& indices) {
+    StorageEngine db(config.db_path, config.cache_size);
 
-    std::vector<uint32_t> indices;
-    for (uint32_t i = 0; i < config.read_batch_size * config.iterations; ++i) {
-        indices.push_back(dist(gen));
-    }
-
-    std::cout << "Running warm up for Random Access..." << std::endl;
-    for (uint32_t i = 0; i < 100; ++i) {
-        auto h = db.fetch_page(indices[i]);
-        (void)h;
-    }
-
-    std::cout << "Running measurements for Random Access.." << std::endl;
-
-    auto start_total = std::chrono::high_resolution_clock::now();
-
+    Timer t;
     for (uint32_t idx : indices) {
         auto handle = db.fetch_page(idx);
         volatile uint32_t magic = handle->get_header().magic;
         (void)magic;
     }
+    double ms = t.elapsed_ms();
 
-    auto end_total = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> total_ms = end_total - start_total;
+    std::cout << " [PageCache]  Time: " << std::setw(8) << ms << " ms | "
+              << "Throughput: " << std::setw(8) << (config.ops_count / (ms/1000.0)) <<" ops/s" << std::endl;
 
-    double total_reads = indices.size();
-    double avg_latency = (total_ms.count() * 1000) / total_reads;
-    double throughput = total_reads / (total_ms.count() / 1000.0);
-
-    std::cout << "Results [Random Access]:" << std::endl;
-    std::cout << "  Avg Total Time: " << total_ms.count() << " ms" << std::endl;
-    std::cout << "  Avg Latency:    " << avg_latency << " us/page" << std::endl;
-    std::cout << "  Throughput:     " << throughput << " pages/sec" << std::endl << std::endl;
+    std::cout << "              Stats: Hits=" << db.get_cache_hits()
+              << " Misses=" << db.get_cache_misses()
+              << " Ratio=" << (100.0 * db.get_cache_hits() / config.ops_count) << "%" << std::endl;
 }
 
 int main() {
-    std::cout << "======= Starting Benchmark Harness =======" << std::endl;
-
     BenchmarkConfig config;
 
-    aqa::StorageEngine db(config.db_path);
-    if (db.get_total_pages() < config.total_pages) {
-        std::cout << "Expanding DB to " << config.total_pages << " pages..." << std::endl;
-        for (uint32_t i = db.get_total_pages(); i < config.total_pages; ++i) {
-            db.allocate_page();
+    std::cout << "Generating " << config.total_pages << " pages for benchmark.." << std::endl;
+    {
+        StorageEngine setup(config.db_path);
+        if (setup.get_total_pages() < config.total_pages) {
+            for (uint32_t i = setup.get_total_pages(); i < config.total_pages; ++i) {
+                setup.allocate_page();
+            }
         }
     }
 
-    std::cout << "Configuration:" << std::endl;
-    std::cout << "  Pages in DB:  " << db.get_total_pages() << std::endl;
-    std::cout << "  Read Batch:   " << config.read_batch_size << std::endl;
-    std::cout << "  Iterations:   " << config.iterations << std::endl;
-    std::cout << "------------------------------------------" << std::endl;
+    std::cout << "Generating workload (" << config.ops_count << " random reads).." << std::endl;
+    std::vector<uint32_t> indices;
+    indices.reserve(config.ops_count);
 
-    run_sequential_scan(db, config);
-    run_random_access(db, config);
+    std::mt19937 gen(42);
+    std::uniform_int_distribution<uint32_t> hot_dist(0, 500);
+    std::uniform_int_distribution<uint32_t> cold_dist(0, config.total_pages - 1);
+    std::bernoulli_distribution is_hot(0.8);
+
+    for (size_t i = 0; i < config.ops_count; ++i) {
+        if (is_hot(gen)) indices.push_back(hot_dist(gen));
+        else indices.push_back(cold_dist(gen));
+    }
+
+    std::cout << "-------------------------------------------------" << std::endl;
+    std::cout << "Running Comparison (Random Read / 80-20 Skew)" << std::endl;
+    std::cout << "-------------------------------------------------" << std::endl;
+
+    bench_naive_random(config, indices);
+    bench_optimized_random(config, indices);
 
     return 0;
 }
