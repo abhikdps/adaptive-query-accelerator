@@ -25,7 +25,7 @@ namespace aqa {
                 off_t offset = static_cast<off_t>(page_id) * PAGE_SIZE;
                 ssize_t bytes = pread(fd_, &out_page, PAGE_SIZE, offset);
                 if (bytes != PAGE_SIZE) {
-                    std::memset(&out_page, 0, PAGE_SIZE);
+                    std::memset(reinterpret_cast<void*>(&out_page), 0, PAGE_SIZE);
                 }
             }
 
