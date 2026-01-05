@@ -1,47 +1,120 @@
-# Storage Format Specifications
+# Storage Format Specifications v2
 
-## Overview
+**Architecture:** Slotted Page with variable-length records.
 
-The AQA (Adaptive Query Accelerator) uses a fixed size, page based storage engine. This design minimizes the disk I/O overhead and optimizes for CPU cache usage. The default page size is **4KB** (4096 bytes), matching the default virtual memory page size of most modern OS kernel and SSD hardware block sizes.
+## 1. File Structure
 
-## Page Layout
-
-Every Page is divided into two distinct regions: the **Header** and the **Payload**.
+The database file (`.db`) is a linear sequence of 4KB fixed-size pages.
 
 ```text
-+------------------------------------------------------+
-|  Page Layout (4096 bytes)                            |
-+------------------------------------------------------+
-|  HEADER (16 bytes)                                   |
-|  - Magic Number (4B)                                 |
-|  - Page ID (4B)                                      |
-|  - LSN (Log Sequence Num) (4B)                       |
-|  - Next Page ID (4B)                                 |
-+------------------------------------------------------+ <--- Offset 16
-|                                                      |
-|  PAYLOAD / RAW DATA STORAGE                          |
-|  (4080 bytes)                                        |
-|                                                      |
-|  [Used by Nodes, Tuples, or Blobs]                   |
-|                                                      |
-|                                                      |
-+------------------------------------------------------+ <--- Offset 4096
+[Page 0] [Page 1] [Page 2] ... [Page N]
 ```
 
-## Field Descriptions
+## 2. Page Layout (4KB)
 
-| Offset | Size (Bytes) | Field          | Description                                                         |
-|--------|--------------|----------------|---------------------------------------------------------------------|
-| 0      | 4            | `magic`        | Unique signature `(0xC0DEFACE)` to verify page validity.            |
-| 4      | 4            | `page_id`      | The unique index of this page in the file (0-based).                |
-| 8      | 4            | `lsn`          | Log Sequence Number. Reserved for Write-Ahead Logging (WAL).        |
-| 12     | 4            | `next_page_id` | Pointer to the next page. Used for linked lists (overflow pages).   |
-| 16     | 4080         | `payload`      | Raw data area (Nodes, Tuples, etc.)                                 |
+Each page organizes data using a **Slotted Page** approach. The page grows from both ends towards the middle.
 
-## Design Decisions
+- **Header & Slots:** Grow **Upwards** (Low Address -> High Address)
+- **Record Data:** Grows **Downwards** (High Address -> Low Address)
+- **Free Space:** The gap in the middle. The page is "Full" when these regions meet.
 
-1. **Mmap Alignment:** The file is a simple concatenation of these 4KB pages. This allows `mmap` to map the file 1:1 into memory without any padding or complex deserialization.
+```text
++-------------------------------------------------+ 0
+|   Page Header (16 Bytes)                        |
++-------------------------------------------------+ 16
+|   Slot Count (2 Bytes)                          |
++-------------------------------------------------+ 18
+|   Slot[0] {Offset, Len} (B bytes)               |
+|   Slot[0] {Offset, Len} (B bytes)               |
+|   ...                                           |
+|   Slot[k]                                       |
++-------------------------------------------------+
+|                                                 |
+|                 FREE SPACE GAP                  |
+|       (variable Size, decreases on write)       |
+|                                                 |
++-------------------------------------------------+
+|   Record[k] Data                                |
++-------------------------------------------------+
+|   ...                                           |
++-------------------------------------------------+
+|   Record[1] Data                                |
++-------------------------------------------------+
+|   Record[0] Data                                |
++-------------------------------------------------+ 4096
+```
 
-2. **Compact Header:** We reduced the header to the bare minimum (16 bytes) to maximize payload space (4080 bytes). Alignment padding is not strictly necessary here as 16 bytes is already aligned to standard word boundaries.
+## 3. Data Structures
 
-3. **Future Extensibility:** While the current implementation exposes a raw payload, higher-level abstractions (like B+ Tree Nodes) will cast this payload region into their own specific structures (e.g., `LeafNode` or `InternalNode`).
+### A. Record ID (RID)
+
+A gloablly unique identifier for any record in the database.
+
+- **Size:** 64 bits (8 bytes)
+- **Format:** `[ Page ID (32 bits) ] [ Slot Index (16 bits) ] [ Reserved (16 bits) ]`
+- **Usage:** To find a record, we fetch `Page(PageID)`, then look up `Slot[SlotIndex]`.
+
+### B. Slot Entry
+
+Each entry in the Slot Array is a 4-byte descriptor.
+
+- **Offset (16 bits):** Byte offset of the record start relative to the Page start.
+- **Length (16 bits):** Total length of the record (Header + Key + Value).
+
+### C. Record Format
+
+The actual data stored in the payload heap. It supports variable-length keys and values.
+
+| Field | Size | Type | Description |
+| :--- | :--- | :--- | :--- |
+| **Meta** | 1 Byte | `uint8_t` | Flags (see below). |
+| **Key Len** | 2 Bytes | `uint16_t` | Length of the Key in bytes. |
+| **Val Len** | 2 Bytes | `uint16_t` | Length of the Value in bytes. |
+| **Key** | *Var* | `char[]` | The key data. |
+| **Value** | *Var* | `char[]` | The value data. |
+
+**Metadata Flags:**
+
+- `0x01` (**TOMBSTONE**): The record is marked as deleted.
+- `0x00` (Alive): Valid record.
+
+## 4. Visual Diagram
+
+```mermaid
+classDiagram
+    class Page {
+        +Header (16B)
+        +SlotCount (2B)
+        +SlotArray[]
+        +FreeSpace
+        +Records[]
+    }
+
+    class Slot {
+        +Offset: uint16
+        +Length: uint16
+    }
+
+    class Record {
+        +Flags: uint8
+        +KeyLen: uint16
+        +ValLen: uint16
+        +KeyBytes
+        +ValueBytes
+    }
+
+    Page *-- Slot : Contains 0..N
+    Page *-- Record : Contains 0..N
+    Slot ..> Record : Points to
+```
+
+## 5. Write Mechanics (Append-Only)
+
+When inserting a new record:
+
+1. **Check Capacity:** Ensure `FreeSpace >= sizeof(Slot) + sizeof(Record)`.
+2. **Append Data:** Copy the `Record` bytes to the **end** of the Free Space (growing downwards).
+3. **Add Slot:** Append a new `Slot` entry to the **start** of the Free Space (growing upwards).
+4. **Update Count:** Increment `Slot Count`.
+
+***Note:** For B+ Trees, the Slot Array is typically lept sorted by the Key to allow Binary Search within the page, even in the Record Data is unsorted in the heap.*
