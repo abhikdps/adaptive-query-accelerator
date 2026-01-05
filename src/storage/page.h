@@ -78,7 +78,7 @@ namespace aqa {
             }
 
             void reset() {
-                std::memset(ptr_, 0, PAGE_SIZE);
+                std::memset(reinterpret_cast<void*>(ptr_), 0, PAGE_SIZE);
                 ptr_->header.magic = PAGE_MAGIC;
             }
 

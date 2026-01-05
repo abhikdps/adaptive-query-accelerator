@@ -1,5 +1,9 @@
 # Adaptive Query Accelerator (AQA)
 
+[![Build Status](https://github.com/abhikdps/adaptive-query-accelerator/actions/workflows/cmake.yml/badge.svg)](https://github.com/abhikdps/adaptive-query-accelerator/actions/workflows/cmake.yml)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
+
 An Adaptive Query Accelerator in C++ that dynamically optimizes data access paths using learned caching and prefetching strategies.
 
 Currently, AQA features a high-performance **Storage Engine** built from scratch leveraging memory-mapped I/O (`mmap`), a custom LRU Buffer Pool and strict RAII resource management.
