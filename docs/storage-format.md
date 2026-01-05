@@ -2,49 +2,46 @@
 
 ## Overview
 
-The ADA (Adaptive Query Accelerator) uses a fixed size, page based storage engine. This design minimizes the disk I/O overhead and optimizes for CPU cache usage. The default page size is **4KB** (4096 bytes), matching the default virtual memory page size of most modern OS kernel and SSD hardware block sizes.
+The AQA (Adaptive Query Accelerator) uses a fixed size, page based storage engine. This design minimizes the disk I/O overhead and optimizes for CPU cache usage. The default page size is **4KB** (4096 bytes), matching the default virtual memory page size of most modern OS kernel and SSD hardware block sizes.
 
 ## Page Layout
 
-Every Page is divided into two distint regions: the **Header** and the **Payload**.
+Every Page is divided into two distinct regions: the **Header** and the **Payload**.
 
 ```text
 +------------------------------------------------------+
 |  Page Layout (4096 bytes)                            |
 +------------------------------------------------------+
-|  HEADER (64 bytes)                                   |
+|  HEADER (16 bytes)                                   |
 |  - Magic Number (4B)                                 |
 |  - Page ID (4B)                                      |
-|  - Links (Next/Prev) (8B)                            |
-|  - Metadata (Offsets/Counts) (8B)                    |
-|  - Padding (36B) -> Aligns to Cache Line             |
-+------------------------------------------------------+ <--- Offset 64
+|  - LSN (Log Sequence Num) (4B)                       |
+|  - Next Page ID (4B)                                 |
++------------------------------------------------------+ <--- Offset 16
 |                                                      |
 |  PAYLOAD / RAW DATA STORAGE                          |
-|  (4032 bytes)                                        |
+|  (4080 bytes)                                        |
 |                                                      |
-|  [Tuple Data grows Downwards v]                      |
+|  [Used by Nodes, Tuples, or Blobs]                   |
 |                                                      |
-|             (Free Space)                             |
-|                                                      |
-|  [Slot Array grows Upwards ^]                        |
 |                                                      |
 +------------------------------------------------------+ <--- Offset 4096
 ```
 
+## Field Descriptions
+
+| Offset | Size (Bytes) | Field          | Description                                                         |
+|--------|--------------|----------------|---------------------------------------------------------------------|
+| 0      | 4            | `magic`        | Unique signature `(0xC0DEFACE)` to verify page validity.            |
+| 4      | 4            | `page_id`      | The unique index of this page in the file (0-based).                |
+| 8      | 4            | `lsn`          | Log Sequence Number. Reserved for Write-Ahead Logging (WAL).        |
+| 12     | 4            | `next_page_id` | Pointer to the next page. Used for linked lists (overflow pages).   |
+| 16     | 4080         | `payload`      | Raw data area (Nodes, Tuples, etc.)                                 |
+
 ## Design Decisions
 
-1. Cache Line Alignment
-The header is padded to 64 bytes. Even though the actual metadata only requires 28 bytes, keeping the header aligned ensures that accessing the first tuple (at offset 64) or reading the header does not straddle cache lines.
+1. **Mmap Alignment:** The file is a simple concatenation of these 4KB pages. This allows `mmap` to map the file 1:1 into memory without any padding or complex deserialization.
 
-2. Variable Length Avoidance
-The PageHeader struct contains no pointers or variable-length arrays. All referencing is done via integer offsets relative to the start of the payload buffer.
+2. **Compact Header:** We reduced the header to the bare minimum (16 bytes) to maximize payload space (4080 bytes). Alignment padding is not strictly necessary here as 16 bytes is already aligned to standard word boundaries.
 
-3. Slotted Page Architecture Support
-While the current implementation defines a raw payload, the `free_space_start` and `free_space_end` fields are included to support a Slotted Page architecture in the future.
-
-    - Slot Array: Will grow from the "top" of the payload (low address).
-
-    - Tuple Data: Will be inserted at the "bottom" of the payload (high address).
-
-    - This allows the page to store variable-length records while keeping the header fixed.
+3. **Future Extensibility:** While the current implementation exposes a raw payload, higher-level abstractions (like B+ Tree Nodes) will cast this payload region into their own specific structures (e.g., `LeafNode` or `InternalNode`).
