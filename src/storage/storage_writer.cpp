@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <stdexcept>
 #include <iostream>
 #include <vector>
@@ -24,7 +25,18 @@ namespace aqa {
 
     StorageWriter::StorageWriter(const std::string& path)
         : path_(path), current_page_id_(0) {
-        out_stream_.open(path, std::ios::binary | std::ios::out | std::ios::trunc);
+
+        bool exists = std::filesystem::exists(path);
+        size_t file_size = exists ? std::filesystem::file_size(path) : 0;
+
+        if (exists && file_size > 0) {
+            current_page_id_ = file_size / PAGE_SIZE;
+            out_stream_.open(path, std::ios::binary | std::ios::in | std::ios::out | std::ios::app);
+        } else {
+            out_stream_.open(path, std::ios::binary | std::ios::out | std::ios::trunc);
+            current_page_id_ = 0;
+        }
+
         if (!out_stream_.is_open()) {
             throw std::runtime_error("Failed to open file for writing: " + path);
         }

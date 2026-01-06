@@ -37,3 +37,8 @@ add_executable(index_test index_test.cpp)
 target_link_libraries(index_test PRIVATE core_lib)
 target_include_directories(index_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME IndexTest COMMAND index_test)
+
+add_executable(recovery_test recovery_test.cpp)
+target_link_libraries(recovery_test PRIVATE core_lib)
+target_include_directories(recovery_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME RecoveryTest COMMAND recovery_test)
