@@ -8,7 +8,7 @@
 #include "storage/page.h"
 
 namespace aqa {
-    constexpr size_t PAGE_HEADER_SIZE = 16;
+    constexpr size_t PAGE_HEADER_SIZE = 64;
     constexpr size_t SLOT_SIZE = 4;
 
     struct SlotEntry {

@@ -8,11 +8,6 @@
 #include "storage/page.h"
 
 namespace aqa {
-    struct RecordID {
-        uint32_t page_id;
-        uint16_t slot_id;
-    };
-
     class StorageWriter {
         public:
             explicit StorageWriter(const std::string& path);

@@ -23,6 +23,11 @@ target_link_libraries(writer_test PRIVATE core_lib)
 target_include_directories(writer_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME WriterTest COMMAND writer_test)
 
+add_executable(reader_test reader_test.cpp)
+target_link_libraries(reader_test PRIVATE core_lib)
+target_include_directories(reader_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME ReaderTest COMMAND reader_test)
+
 add_executable(integration_test integration_test.cpp)
 target_link_libraries(integration_test PRIVATE core_lib)
 target_include_directories(integration_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

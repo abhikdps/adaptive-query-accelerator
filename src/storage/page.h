@@ -13,6 +13,11 @@ namespace aqa {
     // Magic number to verify page integrity
     constexpr uint32_t PAGE_MAGIC = 0x41514144; // ASCII FOR AQAD
 
+    struct RecordID {
+        uint32_t page_id;
+        uint16_t slot_id;
+    };
+
     struct alignas(64) PageHeader {
         uint32_t magic;
         uint32_t page_id;
@@ -30,6 +35,14 @@ namespace aqa {
     struct alignas(PAGE_SIZE) RawPage {
         PageHeader header;
         uint8_t payload[PAGE_SIZE- sizeof(PageHeader)];
+
+        const uint8_t* get_raw_data() const {
+            return reinterpret_cast<const uint8_t*>(this);
+        }
+
+        uint8_t* get_raw_data() {
+            return reinterpret_cast<uint8_t*>(this);
+        }
 
         RawPage() {
             reset();
@@ -67,6 +80,14 @@ namespace aqa {
 
             [[nodiscard]] bool is_valid() const {
                 return ptr_->header.magic == PAGE_MAGIC;
+            }
+
+            [[nodiscard]] const uint8_t* get_raw_data() const {
+                return ptr_->get_raw_data();
+            }
+
+            [[nodiscard]] uint8_t* get_raw_data() {
+                return ptr_->get_raw_data();
             }
 
             PageHeader& get_header_mut() {
