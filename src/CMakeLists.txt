@@ -1,7 +1,7 @@
 add_library(core_lib
-    lib.cpp
     storage/page_cache.cpp
     storage/storage_engine.cpp
+    storage/storage_writer.cpp
     storage/mapped_file.cpp
     utils/data_generator.cpp
     benchmark/query_runner.cpp
