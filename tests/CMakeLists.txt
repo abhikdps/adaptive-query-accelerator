@@ -32,3 +32,8 @@ add_executable(integration_test integration_test.cpp)
 target_link_libraries(integration_test PRIVATE core_lib)
 target_include_directories(integration_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME IntegrationTest COMMAND integration_test)
+
+add_executable(index_test index_test.cpp)
+target_link_libraries(index_test PRIVATE core_lib)
+target_include_directories(index_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME IndexTest COMMAND index_test)
