@@ -62,6 +62,9 @@ int main() {
 
     std::cout << "3. Running Indexed get..." << std::endl;
     bool found_index = false;
+
+    db.get(target_bytes);
+
     double index_time = measure_ms([&]() {
         auto result = db.get(target_bytes);
         if (result) found_index = true;

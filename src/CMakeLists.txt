@@ -7,6 +7,7 @@ add_library(core_lib
     utils/data_generator.cpp
     benchmark/query_runner.cpp
     index/index.cpp
+    cache/lru_cache.cpp
     db/database.cpp
 )
 target_include_directories(core_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
