@@ -52,6 +52,8 @@ namespace aqa {
         auto record_opt = reader_->read_record(*rid_opt);
         if (!record_opt) return std::nullopt;
 
+        if (record_opt->key != key) return std::nullopt;
+
         return record_opt->value;
     }
 }

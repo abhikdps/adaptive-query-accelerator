@@ -23,6 +23,10 @@ namespace aqa {
             double get_recovery_time_ms() const { return recovery_time_ms_; }
             size_t get_record_count() const { return index_.size(); }
 
+            StorageEngine* get_engine_ptr_for_benchmarking() {
+                return engine_.get();
+            }
+
         private:
             void recover();
 
