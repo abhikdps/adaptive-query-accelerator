@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <shared_mutex>
 
 namespace aqa {
     class Database {
@@ -21,7 +22,7 @@ namespace aqa {
             std::optional<std::vector<uint8_t>> get(const std::vector<uint8_t>& key);
 
             double get_recovery_time_ms() const { return recovery_time_ms_; }
-            size_t get_record_count() const { return index_.size(); }
+            size_t get_record_count() const;
 
             StorageEngine* get_engine_ptr_for_benchmarking() {
                 return engine_.get();
@@ -39,6 +40,8 @@ namespace aqa {
             Index index_;
 
             double recovery_time_ms_ = 0.0;
+
+            mutable std::shared_mutex rw_mutex_;
     };
 }
 

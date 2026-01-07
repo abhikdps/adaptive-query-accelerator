@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <ratio>
+#include <shared_mutex>
 #include <vector>
 #include "storage/page.h"
 #include "storage/storage_engine.h"
@@ -40,20 +42,28 @@ namespace aqa {
     }
 
     void Database::put(const std::vector<uint8_t>& key, const std::vector<uint8_t>& value) {
-        RecordID rid = writer_->append(key, value);
+        std::unique_lock<std::shared_mutex> lock(rw_mutex_);
 
+        RecordID rid = writer_->append(key, value);
         index_.insert(key, rid);
     }
 
     std::optional<std::vector<uint8_t>> Database::get(const std::vector<uint8_t>& key) {
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+
         auto rid_opt = index_.lookup(key);
         if (!rid_opt) return std::nullopt;
 
         auto record_opt = reader_->read_record(*rid_opt);
-        if (!record_opt) return std::nullopt;
-
-        if (record_opt->key != key) return std::nullopt;
+        if (!record_opt || record_opt->key != key) {
+            return std::nullopt;
+        }
 
         return record_opt->value;
+    }
+
+    size_t Database::get_record_count() const {
+        std::shared_lock<std::shared_mutex> lock(rw_mutex_);
+        return index_.size();
     }
 }
