@@ -45,5 +45,5 @@ add_test(NAME RecoveryTest COMMAND recovery_test)
 
 add_executable(concurrency_test concurrency_test.cpp)
 target_link_libraries(concurrency_test PRIVATE core_lib pthread)
-target_link_directories(concurrency_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(concurrency_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME ConcurrencyTest COMMAND concurrency_test)

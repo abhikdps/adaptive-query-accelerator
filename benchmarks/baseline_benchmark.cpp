@@ -9,6 +9,7 @@
 #include <chrono>
 #include <random>
 #include <iomanip>
+#include <filesystem>
 
 using namespace aqa;
 
@@ -68,6 +69,9 @@ void bench_optimized_random(const BenchmarkConfig& config, const std::vector<uin
 
 int main() {
     BenchmarkConfig config;
+    if (std::filesystem::exists(config.db_path)) {
+        std::filesystem::remove(config.db_path);
+    }
 
     std::cout << "Generating " << config.total_pages << " pages for benchmark.." << std::endl;
     {
@@ -100,5 +104,6 @@ int main() {
     bench_naive_random(config, indices);
     bench_optimized_random(config, indices);
 
+    std::filesystem::remove(config.db_path);
     return 0;
 }
