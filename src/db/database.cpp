@@ -8,11 +8,13 @@
 #include <optional>
 #include <ratio>
 #include <shared_mutex>
+#include <string>
 #include <vector>
 #include "storage/page.h"
 #include "storage/storage_engine.h"
 #include "storage/storage_reader.h"
 #include "storage/storage_writer.h"
+#include "wal/wal_manager.h"
 
 namespace aqa {
     Database::Database(const std::string& path, size_t cache_size_pages, size_t record_cache_size)
@@ -20,6 +22,19 @@ namespace aqa {
             engine_ = std::make_unique<StorageEngine>(path, cache_size_pages);
             reader_ = std::make_unique<StorageReader>(*engine_);
             writer_ = std::make_unique<StorageWriter>(path);
+
+            std::string wal_path = path + ".wal";
+            wal_ = std::make_unique<WalManager>(wal_path);
+
+            size_t replayed = wal_->replay([this](const WalRecord& rec) {
+                RecordID rid = writer_->append(rec.key, rec.value);
+                index_.insert(rec.key, rid);
+                record_cache_.put(rec.key, rec.value);
+            });
+
+            if (replayed > 0) {
+                std::cout << "[WAL] Replayed " << replayed << " records" <<std::endl;
+            }
 
             recover();
         }
@@ -43,6 +58,8 @@ namespace aqa {
 
     void Database::put(const std::vector<uint8_t>& key, const std::vector<uint8_t>& value) {
         std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+
+        wal_->append(key, value);
 
         RecordID rid = writer_->append(key, value);
         index_.insert(key, rid);

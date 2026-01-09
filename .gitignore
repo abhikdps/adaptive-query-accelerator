@@ -25,6 +25,7 @@ Testing/
 *.exe
 *.out
 *.db
+*.wal
 
 .DS_Store
 

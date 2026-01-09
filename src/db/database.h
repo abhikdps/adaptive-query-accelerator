@@ -5,6 +5,7 @@
 #include "storage/storage_engine.h"
 #include "storage/storage_reader.h"
 #include "storage/storage_writer.h"
+#include "wal/wal_manager.h"
 #include "index/index.h"
 #include <cstddef>
 #include <cstdint>
@@ -49,6 +50,8 @@ namespace aqa {
             mutable std::shared_mutex rw_mutex_;
 
             LruCache record_cache_;
+
+            std::unique_ptr<WalManager> wal_;
     };
 }
 

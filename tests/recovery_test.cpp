@@ -19,7 +19,9 @@ std::string from_bytes(const std::vector<uint8_t>& b) {
 
 void test_recovery() {
     std::string db_path = "recovery_test.db";
+    std::string wal_path = db_path + ".wal";
     std::filesystem::remove(db_path);
+    std::filesystem::remove(wal_path);
 
     std::cout << "Step 1: Populating database.." << std::endl;
     {

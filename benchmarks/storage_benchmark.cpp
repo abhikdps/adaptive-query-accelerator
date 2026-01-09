@@ -16,6 +16,7 @@ using namespace aqa;
 const int NUM_RECORDS = 1000000;
 const int READ_SAMPLES = 10000;
 const std::string DB_PATH = "storage_bench.db";
+const std::string WAL_PATH = DB_PATH + ".wal";
 
 std::vector<uint8_t> make_key(int i) {
     std::string s = "user_id_" + std::to_string(i);
@@ -39,6 +40,9 @@ double measure_sec(Func f) {
 int main() {
     if (std::filesystem::exists(DB_PATH)) {
         std::filesystem::remove(DB_PATH);
+    }
+        if (std::filesystem::exists(WAL_PATH)) {
+        std::filesystem::remove(WAL_PATH);
     }
 
     std::cout << "============================================" << std::endl;
@@ -124,5 +128,6 @@ int main() {
     }
 
     std::filesystem::remove(DB_PATH);
+    std::filesystem::remove(WAL_PATH);
     return 0;
 }

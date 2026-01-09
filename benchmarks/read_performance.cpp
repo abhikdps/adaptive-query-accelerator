@@ -25,7 +25,9 @@ std::vector<uint8_t> make_bytes(const std::string& s) {
 
 int main() {
     std::string path = "read_bench.db";
+    std::string wal_path = path + ".wal";
     std::filesystem::remove(path);
+    std::filesystem::remove(wal_path);
 
     const int NUM_RECORDS = 50000;
     const std::string TARGET_KEY = "key_45000";
@@ -78,5 +80,6 @@ int main() {
     }
 
     std::filesystem::remove(path);
+    std::filesystem::remove(wal_path);
     return 0;
 }

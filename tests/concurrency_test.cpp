@@ -26,7 +26,9 @@ std::vector<uint8_t> make_val(int i) {
 
 void test_concurrency() {
     std::string path = "concurrent_test.db";
+    std::string wal_path = path + ".wal";
     std::filesystem::remove(path);
+    std::filesystem::remove(wal_path);
 
     Database db(path);
     const int NUM_THREADS = 8;
@@ -78,6 +80,7 @@ void test_concurrency() {
 
     std::cout << "[Pass] Multi-threaded read/write stress test" << std::endl;
     std::filesystem::remove(path);
+    std::filesystem::remove(wal_path);
 }
 
 int main() {
