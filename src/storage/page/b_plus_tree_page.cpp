@@ -1,4 +1,4 @@
-#include "storage/b_plus_tree_page.h"
+#include "storage/page/b_plus_tree_page.h"
 
 namespace aqa {
     bool BPlusTreePage::IsLeafPage() const {
@@ -54,5 +54,13 @@ namespace aqa {
 
     void BPlusTreePage::setLSN(lsn_t lsn) {
         lsn_ = lsn;
+    }
+
+    page_id_t BPlusTreePage::getPageId() const {
+    return page_id_;
+}
+
+    void BPlusTreePage::setPageId(page_id_t page_id) {
+        page_id_ = page_id;
     }
 }

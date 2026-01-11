@@ -28,6 +28,9 @@ namespace aqa {
             page_id_t getParentPageId() const;
             void setParentPageId(page_id_t parent_page_id);
 
+            page_id_t getPageId() const;
+            void setPageId(page_id_t page_id);
+
             lsn_t getLSN() const;
             void setLSN(lsn_t lsn);
 
@@ -37,6 +40,7 @@ namespace aqa {
             int size_;
             int max_size_;
             page_id_t parent_page_id_;
+            page_id_t page_id_;
     };
 }
 

@@ -2,10 +2,10 @@
 #define AQA_STORAGE_B_PLUS_TREE_LEAF_PAGE_H
 
 #include <utility>
-#include "storage/b_plus_tree_page.h"
+#include "storage/page/b_plus_tree_page.h"
 
 namespace aqa {
-    #define LEAF_PAGE_HEADER_SIZE 24
+    #define LEAF_PAGE_HEADER_SIZE 28
 
     template <typename KeyType, typename ValueType, typename KeyComparator>
     class BPlusTreeLeafPage : public BPlusTreePage {
