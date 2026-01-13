@@ -9,7 +9,7 @@ namespace aqa {
     #define INTERNAL_PAGE_HEADER_SIZE 24
 
     template <typename KeyType, typename ValueType, typename KeyComparator>
-    class BPlusInternalTreePage : public BPlusTreePage {
+    class BPlusTreeInternalPage : public BPlusTreePage {
         public:
             void Init(page_id_t page_id, page_id_t parent_id = -1, int max_size = 0);
 
