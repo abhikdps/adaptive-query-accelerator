@@ -10,12 +10,24 @@ namespace aqa {
 
     void AccessObserver::record_page_access(uint32_t page_id, bool is_hit) {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (size_ == capacity_) {
+            uint32_t old_id = ring_[head_].page_id;
+            auto it = page_access_counts_.find(old_id);
+            if (it != page_access_counts_.end()) {
+                if (it->second <= 1u) {
+                    page_access_counts_.erase(it);
+                } else {
+                    --it->second;
+                }
+            }
+        }
         ring_[head_] = PageAccessEvent{page_id, is_hit};
         head_ = (head_ + 1) % capacity_;
         if (size_ < capacity_) {
             ++size_;
         }
         ++total_recorded_;
+        page_access_counts_[page_id]++;
     }
 
     void AccessObserver::record_record_access(RecordID rid) {
@@ -51,6 +63,12 @@ namespace aqa {
     size_t AccessObserver::get_size() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return size_;
+    }
+
+    uint64_t AccessObserver::get_access_count(uint32_t page_id) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = page_access_counts_.find(page_id);
+        return it == page_access_counts_.end() ? 0 : it->second;
     }
 
 }

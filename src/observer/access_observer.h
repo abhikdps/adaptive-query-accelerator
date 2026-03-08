@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace aqa {
@@ -29,6 +30,8 @@ namespace aqa {
 
             std::vector<uint32_t> get_recent_page_ids(size_t n) const;
 
+            uint64_t get_access_count(uint32_t page_id) const;
+
             size_t get_total_recorded() const { return total_recorded_; }
 
             size_t get_size() const;
@@ -38,6 +41,7 @@ namespace aqa {
         private:
             size_t capacity_;
             std::vector<PageAccessEvent> ring_;
+            std::unordered_map<uint32_t, uint64_t> page_access_counts_;
             size_t head_{0};
             size_t size_{0};
             size_t total_recorded_{0};

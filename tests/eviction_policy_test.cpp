@@ -1,4 +1,5 @@
 #include "cache/eviction_policy.h"
+#include "observer/access_observer.h"
 #include "storage/page_cache.h"
 #include "storage/mapped_file.h"
 #include "db/database.h"
@@ -65,11 +66,48 @@ void test_record_cache_with_explicit_lru_policy() {
     ASSERT_EQ(r.has_value(), true);
 }
 
+void test_scan_resistant_eviction_policy() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(10, true);
+    observer.record_page_access(11, true);
+    observer.record_page_access(12, true);
+    aqa::ScanResistantPageEvictionPolicy policy(&observer);
+    std::vector<uint32_t> unpinned = {5, 10, 20};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim, 10u);
+}
+
+void test_lfu_eviction_policy() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(10, true);
+    observer.record_page_access(10, true);
+    observer.record_page_access(20, true);
+    aqa::LfuPageEvictionPolicy policy(&observer);
+    std::vector<uint32_t> unpinned = {10, 20};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim, 20u);
+}
+
+void test_scan_resistant_then_lfu_policy() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(10, true);
+    observer.record_page_access(11, true);
+    observer.record_page_access(20, true);
+    observer.record_page_access(20, true);
+    aqa::ScanResistantThenLfuPageEvictionPolicy policy(&observer);
+    std::vector<uint32_t> unpinned = {10, 11, 20};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim, 10u);
+}
+
 int main() {
     test_lru_page_eviction_policy();
     test_lru_record_eviction_policy();
     test_page_cache_with_explicit_lru_policy();
     test_record_cache_with_explicit_lru_policy();
+    test_scan_resistant_eviction_policy();
+    test_lfu_eviction_policy();
+    test_scan_resistant_then_lfu_policy();
     std::cout << "All eviction policy tests passed." << std::endl;
     return 0;
 }
