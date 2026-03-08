@@ -10,9 +10,11 @@
 #include "index/index.h"
 
 namespace aqa {
+    class RecordEvictionPolicy;
+
     class LruCache {
         public:
-            explicit LruCache(size_t capacity);
+            explicit LruCache(size_t capacity, RecordEvictionPolicy* eviction_policy = nullptr);
 
             std::optional<std::vector<uint8_t>> get(const std::vector<uint8_t>& key);
 
@@ -35,6 +37,7 @@ namespace aqa {
             using ListIterator = std::list<CacheEntry>::iterator;
             std::unordered_map<std::vector<uint8_t>, ListIterator, VectorHash> map_;
 
+            RecordEvictionPolicy* eviction_policy_;
             mutable std::mutex mutex_;
     };
 }

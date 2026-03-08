@@ -1,5 +1,7 @@
 #include "storage/page_cache.h"
 #include "observer/access_observer.h"
+#include "cache/eviction_policy.h"
+#include <algorithm>
 #include <cstring>
 #include <stdexcept>
 
@@ -31,8 +33,9 @@ namespace aqa {
         return *this;
     }
 
-    PageCache::PageCache(MappedFile& file, size_t capacity, AccessObserver* observer)
-        : file_(file), observer_(observer) {
+    PageCache::PageCache(MappedFile& file, size_t capacity, AccessObserver* observer,
+                        PageEvictionPolicy* eviction_policy)
+        : file_(file), observer_(observer), eviction_policy_(eviction_policy) {
 
         pool_.resize(capacity);
         pin_counts_.resize(capacity, 0);
@@ -104,25 +107,34 @@ namespace aqa {
     }
 
     size_t PageCache::evict() {
+        std::vector<uint32_t> unpinned_lru;
         for (auto it = lru_list_.rbegin(); it != lru_list_.rend(); ++it) {
-            uint32_t victim_id = *it;
-            size_t frame = page_map_[victim_id];
+            uint32_t pid = *it;
+            size_t frame = page_map_[pid];
             if (pin_counts_[frame] == 0) {
-                RawPage* disk_data = file_.get_page(victim_id);
-                if (disk_data) {
-                    std::memcpy(disk_data, &pool_[frame], PAGE_SIZE);
-                }
-                page_map_.erase(victim_id);
-                lru_iters_.erase(victim_id);
-
-                auto forward_it = std::next(it).base();
-                lru_list_.erase(forward_it);
-
-                return frame;
+                unpinned_lru.push_back(pid);
             }
         }
+        if (unpinned_lru.empty()) {
+            throw std::runtime_error("Buffer Pool Full: All pages are pinned..");
+        }
 
-        throw std::runtime_error("Buffer Pool Full: All pages are pinned..");
+        uint32_t victim_id = eviction_policy_
+            ? eviction_policy_->choose_victim(unpinned_lru)
+            : unpinned_lru.front();
+
+        size_t frame = page_map_[victim_id];
+        RawPage* disk_data = file_.get_page(victim_id);
+        if (disk_data) {
+            std::memcpy(disk_data, &pool_[frame], PAGE_SIZE);
+        }
+        page_map_.erase(victim_id);
+        lru_iters_.erase(victim_id);
+        auto it = std::find(lru_list_.begin(), lru_list_.end(), victim_id);
+        if (it != lru_list_.end()) {
+            lru_list_.erase(it);
+        }
+        return frame;
     }
 
     void PageCache::flush_page(uint32_t page_id) {
