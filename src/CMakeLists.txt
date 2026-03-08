@@ -24,7 +24,7 @@ add_library(core_lib
     db/database.cpp
 )
 target_include_directories(core_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(core_lib PRIVATE bptree_pages)
+target_link_libraries(core_lib PRIVATE bptree_pages Threads::Threads)
 
 add_executable(app main.cpp)
 find_package(Threads REQUIRED)

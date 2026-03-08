@@ -20,6 +20,8 @@ namespace aqa {
 
             PageHandle fetch_page(uint32_t page_id);
 
+            void prefetch_page(uint32_t page_id);
+
             PageHandle allocate_page();
 
             void flush_all();

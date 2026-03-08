@@ -12,6 +12,7 @@
 namespace aqa {
     constexpr size_t PAGE_HEADER_SIZE = 64;
     constexpr size_t SLOT_SIZE = 4;
+    constexpr uint32_t PREFETCH_LOOKAHEAD = 2;
 
     struct SlotEntry {
         uint16_t offset;
@@ -86,6 +87,10 @@ namespace aqa {
                 if (record_opt.has_value()) {
                     callback(rid, record_opt->key, record_opt->value);
                 }
+            }
+
+            for (uint32_t ahead = 1; ahead <= PREFETCH_LOOKAHEAD && (pid + ahead) < total_pages; ++ahead) {
+                engine_.prefetch_page(pid + ahead);
             }
         }
     }

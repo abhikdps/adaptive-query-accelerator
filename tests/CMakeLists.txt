@@ -3,6 +3,11 @@ target_link_libraries(access_observer_test PRIVATE core_lib)
 target_include_directories(access_observer_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME AccessObserverTest COMMAND access_observer_test)
 
+add_executable(prefetch_test prefetch_test.cpp)
+target_link_libraries(prefetch_test PRIVATE core_lib)
+target_include_directories(prefetch_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME PrefetchTest COMMAND prefetch_test)
+
 add_executable(mapped_file_test mapped_file_test.cpp)
 target_link_libraries(mapped_file_test PRIVATE core_lib)
 target_include_directories(mapped_file_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

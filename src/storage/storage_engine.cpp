@@ -1,5 +1,7 @@
 #include "storage/storage_engine.h"
 #include "observer/access_observer.h"
+#include <stdexcept>
+#include <thread>
 
 namespace aqa {
     StorageEngine::StorageEngine(const std::string& file_path, size_t cache_capacity,
@@ -14,6 +16,19 @@ namespace aqa {
         }
 
         return cache_->fetch_page(page_id);
+    }
+
+    void StorageEngine::prefetch_page(uint32_t page_id) {
+        if (page_id >= file_->get_page_count()) {
+            return;
+        }
+        std::thread([this, page_id]() {
+            try {
+                PageHandle h = fetch_page(page_id);
+                (void)h;
+            } catch (...) {
+            }
+        }).detach();
     }
 
     PageHandle StorageEngine::allocate_page() {
