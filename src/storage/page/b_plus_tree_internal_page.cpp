@@ -1,5 +1,6 @@
 #include "storage/page/b_plus_tree_internal_page.h"
 #include <algorithm>
+#include <functional>
 
 namespace aqa {
     template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -54,6 +55,9 @@ namespace aqa {
 
     template <typename KeyType, typename ValueType, typename KeyComparator>
     ValueType BPlusTreeInternalPage<KeyType, ValueType, KeyComparator>::Lookup(const KeyType &key, const KeyComparator &comparator) const {
+        if (getSize() == 0) {
+            return ValueType{};
+        }
         auto it = std::upper_bound(array_ + 1, array_ + getSize(), key,
             [&comparator](const KeyType& k, const std::pair<KeyType, ValueType>& pair) {
                 return comparator(k, pair.first);

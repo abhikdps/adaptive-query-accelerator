@@ -60,9 +60,12 @@ namespace aqa {
 
     template <typename KeyType, typename ValueType, typename KeyComparator>
     int BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>::Insert(const KeyType &key, const ValueType &value, const KeyComparator &comparator) {
-        int index = KeyIndex(key, comparator);
         int current_size = getSize();
+        if (current_size >= getMaxSize()) {
+            return -1;
+        }
 
+        int index = KeyIndex(key, comparator);
         if (index < current_size) {
             KeyType existing_key = KeyAt(index);
             if (!comparator(existing_key, key) && !comparator(key, existing_key)) {
@@ -70,7 +73,7 @@ namespace aqa {
             }
         }
 
-        for(int i = current_size; i > index; i--) {
+        for (int i = current_size; i > index; i--) {
             array_[i] = array_[i - 1];
         }
 

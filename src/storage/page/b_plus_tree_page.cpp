@@ -57,8 +57,8 @@ namespace aqa {
     }
 
     page_id_t BPlusTreePage::getPageId() const {
-    return page_id_;
-}
+        return page_id_;
+    }
 
     void BPlusTreePage::setPageId(page_id_t page_id) {
         page_id_ = page_id;
