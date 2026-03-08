@@ -1,9 +1,11 @@
 #include "storage/storage_engine.h"
+#include "observer/access_observer.h"
 
 namespace aqa {
-    StorageEngine::StorageEngine(const std::string& file_path, size_t cache_capacity) {
+    StorageEngine::StorageEngine(const std::string& file_path, size_t cache_capacity,
+                                 AccessObserver* observer) {
         file_ = std::make_unique<MappedFile>(file_path);
-        cache_ = std::make_unique<PageCache>(*file_, cache_capacity);
+        cache_ = std::make_unique<PageCache>(*file_, cache_capacity, observer);
     }
 
     PageHandle StorageEngine::fetch_page(uint32_t page_id) {

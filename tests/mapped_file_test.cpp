@@ -18,11 +18,13 @@ void test_mapped_io() {
 
         aqa::RawPage* p0 = file.get_page(0);
         p0->header.page_id = 123;
-        std::strcpy((char*)p0->payload, "Hello mmap!");
+        std::strncpy(reinterpret_cast<char*>(p0->payload), "Hello mmap!", sizeof(p0->payload) - 1);
+        p0->payload[sizeof(p0->payload) - 1] = '\0';
 
         aqa::RawPage* p1 = file.get_page(1);
         p1->header.page_id = 456;
-        std::strcpy((char*)p1->payload, "Second Page");
+        std::strncpy(reinterpret_cast<char*>(p1->payload), "Second Page", sizeof(p1->payload) - 1);
+        p1->payload[sizeof(p1->payload) - 1] = '\0';
     }
 
     {

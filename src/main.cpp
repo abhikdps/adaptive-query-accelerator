@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cout<< "Usage: ./app [generate <count> | read <page_id>]" << std::endl;
+        std::cout << "Usage: ./app [generate <count> | read <page_id> | benchmark [seq|rnd] <count>]" << std::endl;
         return 0;
     }
 

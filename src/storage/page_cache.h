@@ -11,9 +11,11 @@
 #include "storage/page_handle.h"
 
 namespace aqa {
+    class AccessObserver;
+
     class PageCache {
         public:
-            PageCache(MappedFile& file, size_t capacity);
+            PageCache(MappedFile& file, size_t capacity, AccessObserver* observer = nullptr);
 
             // DELETE COPY: Cache is a singleton resource
             PageCache(const PageCache&) = delete;
@@ -57,6 +59,8 @@ namespace aqa {
 
             size_t hits_ = 0;
             size_t misses_ = 0;
+
+            AccessObserver* observer_;
 
             void touch_page(uint32_t page_id);
 

@@ -8,9 +8,12 @@
 #include "storage/mapped_file.h"
 
 namespace aqa {
+    class AccessObserver;
+
     class StorageEngine {
         public:
-            StorageEngine(const std::string& file_path, size_t cache_capacity = 1000);
+            StorageEngine(const std::string& file_path, size_t cache_capacity = 1000,
+                         AccessObserver* observer = nullptr);
 
             StorageEngine(const StorageEngine&) = delete;
             StorageEngine& operator=(const StorageEngine&) = delete;

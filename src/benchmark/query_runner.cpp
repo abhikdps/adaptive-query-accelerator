@@ -27,7 +27,7 @@ namespace aqa {
     }
 
     void QueryRunner::run_random_access(uint32_t count, uint32_t total_pages_in_file) {
-        std::cout << "Starting random access of " << count << "pages (Pool size: " << total_pages_in_file << ")" << std::endl;
+        std::cout << "Starting random access of " << count << " pages (Pool size: " << total_pages_in_file << ")" << std::endl;
         std::vector<uint32_t> page_ids(count);
         std::mt19937 gen(42);
         std::uniform_int_distribution<uint32_t> dist(0, total_pages_in_file - 1);

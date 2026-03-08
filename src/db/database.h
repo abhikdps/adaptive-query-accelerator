@@ -16,9 +16,12 @@
 #include <shared_mutex>
 
 namespace aqa {
+    class AccessObserver;
+
     class Database {
         public:
-            explicit Database(const std::string& path, size_t cache_size_pages = 1000, size_t record_cache_size = 1000);
+            explicit Database(const std::string& path, size_t cache_size_pages = 1000,
+                             size_t record_cache_size = 1000, AccessObserver* observer = nullptr);
 
             void put(const std::vector<uint8_t>& key, const std::vector<uint8_t>& value);
 
@@ -33,6 +36,9 @@ namespace aqa {
 
             size_t get_cache_hits() const { return record_cache_.get_hits(); }
             size_t get_cache_misses() const { return record_cache_.get_misses(); }
+
+            AccessObserver* get_observer() { return observer_; }
+            const AccessObserver* get_observer() const { return observer_; }
 
         private:
             void recover();
@@ -50,6 +56,8 @@ namespace aqa {
             mutable std::shared_mutex rw_mutex_;
 
             LruCache record_cache_;
+
+            AccessObserver* observer_;
 
             std::unique_ptr<WalManager> wal_;
     };

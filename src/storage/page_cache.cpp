@@ -1,4 +1,5 @@
 #include "storage/page_cache.h"
+#include "observer/access_observer.h"
 #include <cstring>
 #include <stdexcept>
 
@@ -30,8 +31,8 @@ namespace aqa {
         return *this;
     }
 
-    PageCache::PageCache(MappedFile& file, size_t capacity)
-        : file_(file) {
+    PageCache::PageCache(MappedFile& file, size_t capacity, AccessObserver* observer)
+        : file_(file), observer_(observer) {
 
         pool_.resize(capacity);
         pin_counts_.resize(capacity, 0);
@@ -50,6 +51,9 @@ namespace aqa {
     Page PageCache::get_page_internal(uint32_t page_id) {
         if (page_map_.find(page_id) != page_map_.end()) {
             hits_++;
+            if (observer_) {
+                observer_->record_page_access(page_id, true);
+            }
             touch_page(page_id);
 
             size_t frame = page_map_[page_id];
@@ -58,6 +62,9 @@ namespace aqa {
         }
 
         misses_++;
+        if (observer_) {
+            observer_->record_page_access(page_id, false);
+        }
         size_t frame_id;
 
         if (!free_frames_.empty()) {

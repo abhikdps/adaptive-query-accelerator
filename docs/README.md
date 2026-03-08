@@ -95,6 +95,7 @@ ctest --test-dir build/ --output-on-failure
 
 ### Test Coverage
 
+* AccessObserverTest: Verifies the access observer ring buffer, hit/miss recording, and integration with PageCache and Database.
 * MappedFileTest: Verifies persistence and file growth.
 * PageCacheTest: Verifies LRU eviction and cache hits/misses.
 * PinningTest: Verifies that active pages are never evicted (Buffer Pool safety).

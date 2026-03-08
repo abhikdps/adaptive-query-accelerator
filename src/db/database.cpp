@@ -17,9 +17,10 @@
 #include "wal/wal_manager.h"
 
 namespace aqa {
-    Database::Database(const std::string& path, size_t cache_size_pages, size_t record_cache_size)
-        : path_(path), record_cache_(record_cache_size) {
-            engine_ = std::make_unique<StorageEngine>(path, cache_size_pages);
+    Database::Database(const std::string& path, size_t cache_size_pages, size_t record_cache_size,
+                      AccessObserver* observer)
+        : path_(path), record_cache_(record_cache_size), observer_(observer) {
+            engine_ = std::make_unique<StorageEngine>(path, cache_size_pages, observer);
             reader_ = std::make_unique<StorageReader>(*engine_);
             writer_ = std::make_unique<StorageWriter>(path);
 
