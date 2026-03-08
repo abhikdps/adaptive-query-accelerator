@@ -113,6 +113,10 @@ void test_request_more_than_stored() {
 void test_null_observer_no_crash() {
     std::string path = "access_observer_null.db";
     std::filesystem::remove(path);
+    if (std::filesystem::exists(path + ".wal")) {
+        std::filesystem::remove(path + ".wal");
+    }
+
     {
         aqa::Database db(path, 10, 100, nullptr);
         std::vector<uint8_t> key = {'k', '1'};
@@ -122,6 +126,9 @@ void test_null_observer_no_crash() {
         ASSERT_TRUE(res.has_value());
     }
     std::filesystem::remove(path);
+    if (std::filesystem::exists(path + ".wal")) {
+        std::filesystem::remove(path + ".wal");
+    }
 }
 
 void test_observer_receives_page_accesses_via_database() {
