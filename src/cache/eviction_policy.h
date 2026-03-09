@@ -45,6 +45,14 @@ namespace aqa {
             AccessObserver* observer_;
     };
 
+    class HintAwarePageEvictionPolicy : public PageEvictionPolicy {
+        public:
+            explicit HintAwarePageEvictionPolicy(AccessObserver* observer);
+            uint32_t choose_victim(const std::vector<uint32_t>& unpinned_page_ids_lru_order) override;
+        private:
+            AccessObserver* observer_;
+    };
+
     class RecordEvictionPolicy {
         public:
             virtual ~RecordEvictionPolicy() = default;

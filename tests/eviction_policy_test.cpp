@@ -1,5 +1,6 @@
 #include "cache/eviction_policy.h"
 #include "observer/access_observer.h"
+#include "workload_hint.h"
 #include "storage/page_cache.h"
 #include "storage/mapped_file.h"
 #include "db/database.h"
@@ -100,6 +101,26 @@ void test_scan_resistant_then_lfu_policy() {
     ASSERT_EQ(victim, 10u);
 }
 
+void test_hint_aware_eviction_policy() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(10, true);
+    observer.record_page_access(11, true);
+    observer.record_page_access(20, true);
+    observer.record_page_access(20, true);
+    aqa::HintAwarePageEvictionPolicy policy(&observer);
+    std::vector<uint32_t> unpinned = {10, 11, 20};
+
+    aqa::set_workload_hint(aqa::WorkloadHint::Scan);
+    uint32_t victim_scan = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim_scan, 10u);
+
+    aqa::set_workload_hint(aqa::WorkloadHint::PointLookup);
+    uint32_t victim_point = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim_point, 10u);
+
+    aqa::set_workload_hint(aqa::WorkloadHint::PointLookup);
+}
+
 int main() {
     test_lru_page_eviction_policy();
     test_lru_record_eviction_policy();
@@ -108,6 +129,7 @@ int main() {
     test_scan_resistant_eviction_policy();
     test_lfu_eviction_policy();
     test_scan_resistant_then_lfu_policy();
+    test_hint_aware_eviction_policy();
     std::cout << "All eviction policy tests passed." << std::endl;
     return 0;
 }

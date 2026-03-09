@@ -13,6 +13,11 @@ target_link_libraries(eviction_policy_test PRIVATE core_lib)
 target_include_directories(eviction_policy_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME EvictionPolicyTest COMMAND eviction_policy_test)
 
+add_executable(workload_hint_test workload_hint_test.cpp)
+target_link_libraries(workload_hint_test PRIVATE core_lib)
+target_include_directories(workload_hint_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME WorkloadHintTest COMMAND workload_hint_test)
+
 add_executable(mapped_file_test mapped_file_test.cpp)
 target_link_libraries(mapped_file_test PRIVATE core_lib)
 target_include_directories(mapped_file_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

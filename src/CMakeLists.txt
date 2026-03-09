@@ -12,6 +12,7 @@ target_include_directories(bptree_pages PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(core_lib
     cache/eviction_policy.cpp
     observer/access_observer.cpp
+    workload_hint.cpp
     storage/page_cache.cpp
     storage/storage_engine.cpp
     storage/storage_writer.cpp

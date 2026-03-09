@@ -47,6 +47,12 @@ void test_recovery() {
         ASSERT_TRUE(val_last.has_value());
         ASSERT_EQ(from_bytes(*val_last), "val_999");
 
+        size_t scan_count = 0;
+        db.scan([&](aqa::RecordID, const std::vector<uint8_t>&, const std::vector<uint8_t>&) {
+            ++scan_count;
+        });
+        ASSERT_EQ(scan_count, 1000u);
+
         db.put(to_bytes("new_key"), to_bytes("new_val"));
         ASSERT_EQ(db.get_record_count(), 1001);
     }

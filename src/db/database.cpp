@@ -1,4 +1,5 @@
 #include "db/database.h"
+#include "workload_hint.h"
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -46,7 +47,9 @@ namespace aqa {
         if (engine_->get_total_pages() > 0) {
             std::cout<< "[Database] Starting recovery scan.." <<std::endl;
 
+            set_workload_hint(WorkloadHint::Scan);
             index_.rebuild(*reader_);
+            set_workload_hint(WorkloadHint::PointLookup);
         }
 
         auto end = std::chrono::high_resolution_clock::now();
@@ -85,6 +88,12 @@ namespace aqa {
         }
 
         return std::nullopt;
+    }
+
+    void Database::scan(std::function<void(RecordID, const std::vector<uint8_t>&, const std::vector<uint8_t>&)> callback) {
+        set_workload_hint(WorkloadHint::Scan);
+        reader_->scan(std::move(callback));
+        set_workload_hint(WorkloadHint::PointLookup);
     }
 
     size_t Database::get_record_count() const {

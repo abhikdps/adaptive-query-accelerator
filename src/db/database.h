@@ -7,8 +7,10 @@
 #include "storage/storage_writer.h"
 #include "wal/wal_manager.h"
 #include "index/index.h"
+#include "workload_hint.h"
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <memory>
 #include <optional>
@@ -26,6 +28,8 @@ namespace aqa {
             void put(const std::vector<uint8_t>& key, const std::vector<uint8_t>& value);
 
             std::optional<std::vector<uint8_t>> get(const std::vector<uint8_t>& key);
+
+            void scan(std::function<void(RecordID, const std::vector<uint8_t>&, const std::vector<uint8_t>&)> callback);
 
             double get_recovery_time_ms() const { return recovery_time_ms_; }
             size_t get_record_count() const;
