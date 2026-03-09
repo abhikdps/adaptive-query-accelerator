@@ -14,32 +14,32 @@ The database file (`.db`) is a linear sequence of 4KB fixed-size pages.
 
 Each page organizes data using a **Slotted Page** approach. The page grows from both ends towards the middle.
 
-- **Header & Slots:** Grow **Upwards** (Low Address -> High Address)
-- **Record Data:** Grows **Downwards** (High Address -> Low Address)
-- **Free Space:** The gap in the middle. The page is "Full" when these regions meet.
+- **Header:** Fixed 64-byte `PageHeader` (magic, page_id, next/prev, tuple_count, free_space offsets, flags, padding). The slotted-page payload (slot count, slots, records) lives in the remaining bytes.
+- **Slot count & Slots:** At the start of the payload (low addresses); grow upward.
+- **Record Data:** Grows downward from the end of the page.
+- **Free Space:** The gap in the middle. The page is full when these regions meet.
 
 ```text
 +-------------------------------------------------+ 0
-|   Page Header (16 Bytes)                        |
-+-------------------------------------------------+ 16
+|   Page Header (64 Bytes)                        |
+|   magic, page_id, next_page_id, prev_page_id,   |
+|   tuple_count, free_space_start, free_space_end, |
+|   flags, padding                                |
++-------------------------------------------------+ 64
 |   Slot Count (2 Bytes)                          |
-+-------------------------------------------------+ 18
-|   Slot[0] {Offset, Len} (B bytes)               |
-|   Slot[0] {Offset, Len} (B bytes)               |
++-------------------------------------------------+ 66
+|   Slot[0] {Offset, Len} (4 bytes)               |
+|   Slot[1] {Offset, Len}                         |
 |   ...                                           |
 |   Slot[k]                                       |
 +-------------------------------------------------+
 |                                                 |
 |                 FREE SPACE GAP                  |
-|       (variable Size, decreases on write)       |
+|       (variable size, decreases on write)      |
 |                                                 |
 +-------------------------------------------------+
 |   Record[k] Data                                |
-+-------------------------------------------------+
 |   ...                                           |
-+-------------------------------------------------+
-|   Record[1] Data                                |
-+-------------------------------------------------+
 |   Record[0] Data                                |
 +-------------------------------------------------+ 4096
 ```
@@ -48,11 +48,10 @@ Each page organizes data using a **Slotted Page** approach. The page grows from 
 
 ### A. Record ID (RID)
 
-A gloablly unique identifier for any record in the database.
+A globally unique identifier for any record in the database.
 
-- **Size:** 64 bits (8 bytes)
-- **Format:** `[ Page ID (32 bits) ] [ Slot Index (16 bits) ] [ Reserved (16 bits) ]`
-- **Usage:** To find a record, we fetch `Page(PageID)`, then look up `Slot[SlotIndex]`.
+- **Size:** 48 bits in practice (page_id 32 bits + slot_id 16 bits). Implemented as `struct RecordID { uint32_t page_id; uint16_t slot_id; }`.
+- **Usage:** To find a record, fetch the page by `page_id`, then look up `Slot[slot_id]`.
 
 ### B. Slot Entry
 
@@ -83,7 +82,7 @@ The actual data stored in the payload heap. It supports variable-length keys and
 ```mermaid
 classDiagram
     class Page {
-        +Header (16B)
+        +Header (64B)
         +SlotCount (2B)
         +SlotArray[]
         +FreeSpace
@@ -117,4 +116,4 @@ When inserting a new record:
 3. **Add Slot:** Append a new `Slot` entry to the **start** of the Free Space (growing upwards).
 4. **Update Count:** Increment `Slot Count`.
 
-***Note:** For B+ Trees, the Slot Array is typically lept sorted by the Key to allow Binary Search within the page, even in the Record Data is unsorted in the heap.*
+***Note:** For B+ tree pages, the slot array may be kept sorted by key for binary search within the page; the main KV storage uses an append-only slotted layout as described above.*

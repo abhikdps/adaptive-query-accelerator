@@ -14,7 +14,7 @@ The system is designed with a strict hierarchy of ownership, separating the logi
 
 ```mermaid
 graph TD
-    User["User / Application"] -->|put/get| DB["Database Manager"]
+    User["User / Application"] -->|put/get/scan| DB["Database Manager"]
     DB -->|Read Lock| LRU["LRU Cache (Hot Records)"]
     DB -->|Write Lock| Index["Hash Index (Key -> RecordID)"]
 
@@ -25,9 +25,9 @@ graph TD
         Writer -->|Bytes| Engine
     end
 
-    subgraph "OS Layer"
-        Engine -->|mmap| PageCache["OS Page Cache"]
-        PageCache <-->|Sync| Disk["Physical Disk"]
+    subgraph "Storage Layer"
+        Engine -->|read/write| PageCache["Page Cache (buffer pool)"]
+        PageCache <-->|mmap/sync| Disk["Physical Disk"]
     end
 ```
 
@@ -36,8 +36,8 @@ graph TD
 * **Database (The Orchestrator):** Manages the lifecycle of components and enforces concurrency rules using **Reader-Writer Locks** (`std::shared_mutex`). This allows for high-throughput parallel reads while ensuring atomic writes.
 * **Indexing:** An in-memory **Hash Index** (`std::unordered_map`) maps keys to their physical disk location (PageID + SlotID), providing **O(1)** lookup complexity.
 * **Tiered Caching:**
-  * **L1 (Record Cache):** An LRU Cache stores deserialized "Hot" objects, bypassing the storage engine entirely for frequently accessed data (~110ns latency).
-  * **L2 (Page Cache):** The OS Page Cache buffers 4KB disk blocks in RAM, minimizing physical I/O latency via zero-copy `mmap`.
+  * **L1 (Record Cache):** An LRU cache stores deserialized "hot" records, bypassing the storage engine entirely for frequently accessed data (~110ns latency).
+  * **L2 (Page Cache):** A custom in-process buffer pool (not the OS page cache) holds a fixed number of 4KB pages in RAM. It uses an LRU-style eviction by default and supports pluggable policies (e.g. scan-resistant, LFU, hint-aware). The backing file is memory-mapped (`mmap`) for zero-copy reads.
 * **Storage Engine:** Handles persistent storage. Reads are performed via pointer arithmetic (zero syscalls for cached pages), and writes use an append-only strategy for maximum throughput.
 * **Slotted Pages:** Data is organized into 4KB pages with a slot directory, allowing for efficient record management, variable-length records, and internal fragmentation control.
 
@@ -79,6 +79,12 @@ To reproduce the performance numbers, run the storage benchmark suite:
 ./build/benchmarks/storage_benchmark
 ```
 
+To compare eviction policies under a mixed workload (working set + scan + working set):
+
+```bash
+./build/benchmarks/eviction_benchmark
+```
+
 ## Testing
 
 The codebase follows strict RAII (Resource Acquisition Is Initialization) principles.
@@ -95,13 +101,25 @@ ctest --test-dir build/ --output-on-failure
 
 ### Test Coverage
 
-* AccessObserverTest: Verifies the access observer ring buffer, hit/miss recording, and integration with PageCache and Database.
-* PrefetchTest: Verifies prefetch_page bounds and scan with prefetch (record count).
-* EvictionPolicyTest: Verifies LRU page/record eviction policies and cache wiring.
-* MappedFileTest: Verifies persistence and file growth.
-* PageCacheTest: Verifies LRU eviction and cache hits/misses.
-* PinningTest: Verifies that active pages are never evicted (Buffer Pool safety).
-* IntegrationTest: Verifies the full stack from API to Disk.
-* ReaderTest: Validates the slotted page parser and data integrity.
-* RecoveryTest: Ensures data persistence and index reconstruction after a restart.
-* ConcurrencyTest: Verifies thread safety under heavy read/write contention.
+* **AccessObserverTest** — Access observer ring buffer, hit/miss recording, `get_access_count`, and integration with PageCache and Database.
+* **PrefetchTest** — Prefetch_page bounds and scan with prefetch (record count).
+* **EvictionPolicyTest** — LRU page/record policies; ScanResistant, LFU, ScanResistantThenLfu, HintAware; null observer fallback; single candidate; PageCache with HintAware.
+* **WorkloadHintTest** — Workload hint get/set, ScanScope restore (nested and previous), Database::scan sets hint during callback.
+* **MappedFileTest** — Persistence and file growth.
+* **PageCacheTest** — LRU eviction and cache hits/misses.
+* **PinningTest** — Active pages are never evicted (buffer pool safety).
+* **IntegrationTest** — Full stack from API to disk.
+* **ReaderTest** — Slotted page parser and data integrity.
+* **RecoveryTest** — Data persistence, index reconstruction, and Database::scan after restart.
+* **ConcurrencyTest** — Thread safety under read/write contention.
+
+### Documentation
+
+| Doc | Description |
+| --- | ----------- |
+| [eviction-policy.md](eviction-policy.md) | Pluggable eviction (LRU, ScanResistant, LFU, HintAware); testing and benchmark. |
+| [workload-hints.md](workload-hints.md) | WorkloadHint (PointLookup/Scan), Database::scan(), ScanScope. |
+| [access-observer.md](access-observer.md) | Access observer API and where it is used. |
+| [prefetch.md](prefetch.md) | Sequential prefetch during scan. |
+| [storage-architecture.md](storage-architecture.md) | Storage engine, page cache, mmap, pinning, eviction. |
+| [storage-format.md](storage-format.md) | Slotted-page layout, record format, RID. |

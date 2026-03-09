@@ -1,6 +1,6 @@
 # Storage Engine Architecture
 
-This document details the design and implementation of the AQA Storage Layer. The storage engine provides high-performance, buffered access to disk pages using memory-mapped I/O (`mmap`) and a custom LRU Page Cache.
+This document details the design and implementation of the AQA Storage Layer. The storage engine provides high-performance, buffered access to disk pages using memory-mapped I/O (`mmap`) and a custom Page Cache (buffer pool) with LRU eviction by default and optional pluggable policies (e.g. scan-resistant, LFU, hint-aware). See [eviction-policy.md](eviction-policy.md) and [access-observer.md](access-observer.md).
 
 ## 1. High-Level Architecture
 
@@ -64,7 +64,7 @@ To prevent memory leaks and race conditions, we strictly enforce **Resource Acqu
 
 ## 3. Page Cache & Eviction
 
-The `PageCache` uses a standard **LRU (Least Recently Used)** replacement policy.
+The `PageCache` uses **LRU (Least Recently Used)** replacement by default. When an optional **eviction policy** is provided (e.g. `ScanResistantPageEvictionPolicy`, `HintAwarePageEvictionPolicy`), it chooses the victim from the unpinned pages (still in LRU order) instead of always picking the oldest. An optional **access observer** can record page accesses so adaptive policies can prefer evicting scan traffic or keep frequently used pages.
 
 ### Data Structures
 
@@ -98,11 +98,11 @@ The `PageCache` uses a standard **LRU (Least Recently Used)** replacement policy
 
 3. **Eviction:**
 
-    - Scan the LRU list from Back to Front.
+    - Build the list of unpinned page IDs in LRU order (back to front).
 
-    - Find the first page with `pin_count == 0`.
+    - If an eviction policy is set, call `choose_victim(unpinned_lru)`; otherwise take the first (oldest).
 
-    - If the page is dirty (modified), flush it to the `MappedFile`.
+    - Write the victim frame back to `MappedFile` (currently all evicted pages are written back; a dirty flag is not yet implemented).
 
     - Remove from metadata and reuse the frame.
 
@@ -114,12 +114,12 @@ Pinning prevents the cache from evicting a page while it is actively being used 
 
 - **Unpin:** Happens automatically when the PageHandle goes out of scope (destructor is called).
 
-- **Safety Rule:** If all pages in the cache are pinned (Pin Count > 0), the system throws a BufferPoolFullException. This forces the application to release pages before requesting more.
+- **Safety Rule:** If all pages in the cache are pinned (pin count > 0), the system throws a `std::runtime_error` ("Buffer Pool Full: All pages are pinned."). The application must release handles before requesting more pages.
 
 ## 5. Limitations & Future Work
 
 1. **Thread Safety:** The current implementation uses a coarse-grained `std::mutex` on the entire cache. High concurrency workloads will contend on this lock. Future work involves Lock Striping or Latch Crabbing.
 
-2. **Dirty Flags:** Currently, `evict()` optimistically writes back pages. We should implement a `is_dirty` flag in the Page Header to avoid writing read-only pages back to disk.
+2. **Dirty Flags:** Currently, `evict()` writes back every evicted page. An `is_dirty` flag (or similar) would avoid writing read-only pages back to disk.
 
 3. **Clock Replacement:** The `std::list` LRU overhead is high (pointer chasing). A "Clock" or "Second Chance" algorithm would be more cache-friendly.
