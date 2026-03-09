@@ -13,6 +13,8 @@
         std::cerr << "FAIL: " << #a << " != " << #b << std::endl; \
         exit(1); \
     }
+#define ASSERT_TRUE(c) \
+    if (!(c)) { std::cerr << "FAIL: " << #c << std::endl; exit(1); }
 
 void test_lru_page_eviction_policy() {
     aqa::LruPageEvictionPolicy policy;
@@ -121,6 +123,60 @@ void test_hint_aware_eviction_policy() {
     aqa::set_workload_hint(aqa::WorkloadHint::PointLookup);
 }
 
+void test_adaptive_policies_with_null_observer_fallback_to_lru() {
+    std::vector<uint32_t> unpinned = {5, 10, 15};
+    aqa::ScanResistantPageEvictionPolicy scan_policy(nullptr);
+    ASSERT_EQ(scan_policy.choose_victim(unpinned), 5u);
+    aqa::LfuPageEvictionPolicy lfu_policy(nullptr);
+    ASSERT_EQ(lfu_policy.choose_victim(unpinned), 5u);
+    aqa::HintAwarePageEvictionPolicy hint_policy(nullptr);
+    aqa::set_workload_hint(aqa::WorkloadHint::Scan);
+    ASSERT_EQ(hint_policy.choose_victim(unpinned), 5u);
+    aqa::set_workload_hint(aqa::WorkloadHint::PointLookup);
+    ASSERT_EQ(hint_policy.choose_victim(unpinned), 5u);
+}
+
+void test_scan_resistant_with_no_sequential_run_evicts_lru() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(100, true);
+    observer.record_page_access(200, true);
+    aqa::ScanResistantPageEvictionPolicy policy(&observer);
+    std::vector<uint32_t> unpinned = {10, 20, 30};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim, 10u);
+}
+
+void test_single_candidate_returned() {
+    aqa::LruPageEvictionPolicy lru;
+    std::vector<uint32_t> one = {42};
+    ASSERT_EQ(lru.choose_victim(one), 42u);
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(42, true);
+    aqa::LfuPageEvictionPolicy lfu(&observer);
+    ASSERT_EQ(lfu.choose_victim(one), 42u);
+}
+
+void test_page_cache_with_hint_aware_policy() {
+    std::string path = "eviction_hint_aware.db";
+    std::filesystem::remove(path);
+    aqa::MappedFile file(path);
+    file.grow_file(8);
+    aqa::AccessObserver observer(128);
+    aqa::HintAwarePageEvictionPolicy policy(&observer);
+    aqa::PageCache cache(file, 2, &observer, &policy);
+    {
+        auto h0 = cache.fetch_page(0);
+        auto h1 = cache.fetch_page(1);
+        (void)h0;
+        (void)h1;
+    }
+    aqa::set_workload_hint(aqa::WorkloadHint::PointLookup);
+    auto h2 = cache.fetch_page(2);
+    (void)h2;
+    ASSERT_EQ(cache.get_size(), 2u);
+    std::filesystem::remove(path);
+}
+
 int main() {
     test_lru_page_eviction_policy();
     test_lru_record_eviction_policy();
@@ -130,6 +186,10 @@ int main() {
     test_lfu_eviction_policy();
     test_scan_resistant_then_lfu_policy();
     test_hint_aware_eviction_policy();
+    test_adaptive_policies_with_null_observer_fallback_to_lru();
+    test_scan_resistant_with_no_sequential_run_evicts_lru();
+    test_single_candidate_returned();
+    test_page_cache_with_hint_aware_policy();
     std::cout << "All eviction policy tests passed." << std::endl;
     return 0;
 }
