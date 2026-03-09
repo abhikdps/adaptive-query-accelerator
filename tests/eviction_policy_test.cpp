@@ -156,6 +156,25 @@ void test_single_candidate_returned() {
     ASSERT_EQ(lfu.choose_victim(one), 42u);
 }
 
+void test_learned_eviction_policy() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(10, true);
+    observer.record_page_access(10, true);
+    observer.record_page_access(20, true);
+    observer.record_page_access(11, true);
+    aqa::LearnedPageEvictionPolicy policy(&observer, 64, 0.05);
+    std::vector<uint32_t> unpinned = {10, 11, 20};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_TRUE(victim == 10u || victim == 11u || victim == 20u);
+}
+
+void test_learned_eviction_policy_null_observer() {
+    std::vector<uint32_t> unpinned = {5, 10, 15};
+    aqa::LearnedPageEvictionPolicy policy(nullptr, 64, 0.05);
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim, 5u);
+}
+
 void test_page_cache_with_hint_aware_policy() {
     std::string path = "eviction_hint_aware.db";
     std::filesystem::remove(path);
@@ -189,6 +208,8 @@ int main() {
     test_adaptive_policies_with_null_observer_fallback_to_lru();
     test_scan_resistant_with_no_sequential_run_evicts_lru();
     test_single_candidate_returned();
+    test_learned_eviction_policy();
+    test_learned_eviction_policy_null_observer();
     test_page_cache_with_hint_aware_policy();
     std::cout << "All eviction policy tests passed." << std::endl;
     return 0;

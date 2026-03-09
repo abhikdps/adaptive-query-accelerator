@@ -32,6 +32,8 @@ namespace aqa {
 
             uint64_t get_access_count(uint32_t page_id) const;
 
+            size_t get_last_index_in_recent(uint32_t page_id) const;
+
             size_t get_total_recorded() const { return total_recorded_; }
 
             size_t get_size() const;

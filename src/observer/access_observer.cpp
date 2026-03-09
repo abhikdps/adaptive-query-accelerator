@@ -71,4 +71,14 @@ namespace aqa {
         return it == page_access_counts_.end() ? 0 : it->second;
     }
 
+    size_t AccessObserver::get_last_index_in_recent(uint32_t page_id) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (size_ == 0) return capacity_;
+        for (size_t i = 0; i < size_; ++i) {
+            size_t idx = (head_ + capacity_ - 1 - i) % capacity_;
+            if (ring_[idx].page_id == page_id) return i;
+        }
+        return capacity_;
+    }
+
 }
