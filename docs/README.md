@@ -103,7 +103,7 @@ ctest --test-dir build/ --output-on-failure
 
 * **AccessObserverTest** — Access observer ring buffer, hit/miss recording, `get_access_count`, and integration with PageCache and Database.
 * **PrefetchTest** — Prefetch_page bounds and scan with prefetch (record count).
-* **EvictionPolicyTest** — LRU page/record policies; ScanResistant, LFU, ScanResistantThenLfu, HintAware, LearnedPageEvictionPolicy; null observer fallback; single candidate; PageCache with HintAware.
+* **EvictionPolicyTest** — LRU, ScanResistant, LFU, ScanResistantThenLfu, HintAware, LearnedPageEvictionPolicy, LoadedLearnedPageEvictionPolicy; null observer fallback; single candidate; PageCache with HintAware.
 * **WorkloadHintTest** — Workload hint get/set, ScanScope restore (nested and previous), Database::scan sets hint during callback.
 * **MappedFileTest** — Persistence and file growth.
 * **PageCacheTest** — LRU eviction and cache hits/misses.
@@ -119,6 +119,7 @@ ctest --test-dir build/ --output-on-failure
 | --- | ----------- |
 | [eviction-policy.md](eviction-policy.md) | Pluggable eviction (LRU, ScanResistant, LFU, HintAware, Learned); testing and benchmark. |
 | [learned-eviction.md](learned-eviction.md) | Learned eviction policy (linear model, online weight updates). |
+| [offline-policy.md](offline-policy.md) | Offline trainer and loading policy from file at runtime. |
 | [workload-hints.md](workload-hints.md) | WorkloadHint (PointLookup/Scan), Database::scan(), ScanScope. |
 | [access-observer.md](access-observer.md) | Access observer API and where it is used. |
 | [prefetch.md](prefetch.md) | Sequential prefetch during scan. |

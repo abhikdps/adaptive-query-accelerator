@@ -6,12 +6,12 @@ Both the page cache (L2) and the record cache (L1) can use a pluggable **evictio
 
 ### PageEvictionPolicy (L2)
 
-- **`uint32_t choose_victim(const std::vector<uint32_t>& unpinned_page_ids_lru_order)`**  
+- **`uint32_t choose_victim(const std::vector<uint32_t>& unpinned_page_ids_lru_order)`**
   Receives unpinned page IDs in LRU order (oldest first). Must return one of them (the page to evict).
 
 ### RecordEvictionPolicy (L1)
 
-- **`size_t choose_victim(const std::vector<const std::vector<uint8_t>*>& keys_lru_order)`**  
+- **`size_t choose_victim(const std::vector<const std::vector<uint8_t>*>& keys_lru_order)`**
   Receives pointers to keys in LRU order (oldest first). Must return a valid index; that entry will be evicted.
 
 ## Implementations
@@ -21,7 +21,8 @@ Both the page cache (L2) and the record cache (L1) can use a pluggable **evictio
 - **LfuPageEvictionPolicy** — Uses `AccessObserver::get_access_count()` (frequency in the recent ring); evicts the candidate with smallest count, tie-break by LRU order.
 - **ScanResistantThenLfuPageEvictionPolicy** — Combines both: first narrows to pages that look like scan traffic, then among those (or among all if none) evicts by LFU. Good default for mixed point-lookup and scan workloads.
 - **HintAwarePageEvictionPolicy** — Reads the thread-local workload hint: when `Scan`, uses scan-resistant behavior; when `PointLookup`, uses LFU. Use with `Database::scan()` (which sets the hint automatically) or `set_workload_hint()` / `ScanScope`.
-- **LearnedPageEvictionPolicy** — Linear score over (recency, count, scan) with online weight updates using reuse feedback (was the evicted page requested again?). See [learned-eviction.md](learned-eviction.md).
+- **LearnedPageEvictionPolicy** — Linear score (recency, count, scan) with online weight updates. See [learned-eviction.md](learned-eviction.md).
+- **LoadedLearnedPageEvictionPolicy** — Load weights from a policy file (from offline trainer); same scoring, no runtime updates. See [offline-policy.md](offline-policy.md).
 - **LruRecordEvictionPolicy** — Returns `0` (evict oldest).
 
 ## Where it is used
