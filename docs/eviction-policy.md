@@ -21,6 +21,7 @@ Both the page cache (L2) and the record cache (L1) can use a pluggable **evictio
 - **LfuPageEvictionPolicy** — Uses `AccessObserver::get_access_count()` (frequency in the recent ring); evicts the candidate with smallest count, tie-break by LRU order.
 - **ScanResistantThenLfuPageEvictionPolicy** — Combines both: first narrows to pages that look like scan traffic, then among those (or among all if none) evicts by LFU. Good default for mixed point-lookup and scan workloads.
 - **HintAwarePageEvictionPolicy** — Reads the thread-local workload hint: when `Scan`, uses scan-resistant behavior; when `PointLookup`, uses LFU. Use with `Database::scan()` (which sets the hint automatically) or `set_workload_hint()` / `ScanScope`.
+- **LearnedPageEvictionPolicy** — Linear score over (recency, count, scan) with online weight updates using reuse feedback (was the evicted page requested again?). See [learned-eviction.md](learned-eviction.md).
 - **LruRecordEvictionPolicy** — Returns `0` (evict oldest).
 
 ## Where it is used
@@ -46,7 +47,7 @@ StorageEngine and Database do not pass a policy (default nullptr), so behavior i
 
 Example output (parameters: working_set=8, scan_lead=16, scan_tail=80, capacity=32):
 
-```
+```text
 Eviction benchmark: working_set=8, scan_lead=16, scan_tail=80, capacity=32
 ----------------------------------------
 [LRU] hits=48, misses=144

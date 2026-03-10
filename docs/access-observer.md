@@ -21,6 +21,7 @@ The observer is wired at the **page cache (L2)** so every `fetch_page()` is reco
   - `get_recent_page_accesses(size_t n)` — Returns the last `n` events as `std::vector<PageAccessEvent>` (oldest first). Each event has `page_id` and `is_hit`.
   - `get_recent_page_ids(size_t n)` — Returns the last `n` page IDs in order (convenience for prefetchers).
   - `get_access_count(uint32_t page_id)` — Returns how many times `page_id` appears in the current ring (bounded frequency). Used by LFU-style eviction policies.
+  - `get_last_index_in_recent(uint32_t page_id)` — Returns the index of the page’s most recent occurrence in the ring (0 = most recent), or `capacity` if not found. Used by learned eviction for the recency feature.
   - `get_size()` — Current number of events in the ring (≤ capacity).
   - `get_capacity()` — Ring capacity.
   - `get_total_recorded()` — Total number of events ever recorded (may exceed capacity).

@@ -4,11 +4,11 @@ The codebase includes **page-level** B+ tree structures (leaf and internal pages
 
 ## What Exists
 
-| Component | Description |
-|-----------|-------------|
-| **BPlusTreePage** | Base class: page type, size, max/min size, parent/page id, LSN. Uses `page_id_t` (= `int`) and `lsn_t` (= `int`). |
-| **BPlusTreeLeafPage&lt;K,V,C&gt;** | Leaf: `Init`, `KeyAt`, `ValueAt`, `KeyIndex`, `Insert`, `GetNextPageId` / `SetNextPageId`. Template instantiation: `int, int, std::less<int>`. |
-| **BPlusTreeInternalPage&lt;K,V,C&gt;** | Internal: `Init`, `KeyAt`, `ValueAt`, `Lookup`, `ValueIndex`, get/set key/value. Template instantiation: `int, int, std::less<int>`. |
+| Component                              | Description                                                                                                                                    |
+|----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| **BPlusTreePage**                      | Base class: page type, size, max/min size, parent/page id, LSN. Uses `page_id_t` (= `int`) and `lsn_t` (= `int`).                              |
+| **BPlusTreeLeafPage&lt;K,V,C&gt;**     | Leaf: `Init`, `KeyAt`, `ValueAt`, `KeyIndex`, `Insert`, `GetNextPageId` / `SetNextPageId`. Template instantiation: `int, int, std::less<int>`. |
+| **BPlusTreeInternalPage&lt;K,V,C&gt;** | Internal: `Init`, `KeyAt`, `ValueAt`, `Lookup`, `ValueIndex`, get/set key/value. Template instantiation: `int, int, std::less<int>`.           |
 
 - **Leaf:** Insert rejects duplicates (returns -1), rejects when full (returns -1), otherwise inserts in sorted order and returns the new size.
 - **Internal:** Lookup uses `upper_bound` with the usual “first key unused” convention; returns default `ValueType{}` when size is 0 to avoid undefined behavior.
