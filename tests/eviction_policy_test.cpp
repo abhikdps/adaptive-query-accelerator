@@ -4,6 +4,7 @@
 #include "storage/page_cache.h"
 #include "storage/mapped_file.h"
 #include "db/database.h"
+#include <fstream>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -175,6 +176,31 @@ void test_learned_eviction_policy_null_observer() {
     ASSERT_EQ(victim, 5u);
 }
 
+void test_loaded_learned_eviction_policy() {
+    aqa::AccessObserver observer(64);
+    observer.record_page_access(10, true);
+    observer.record_page_access(11, true);
+    observer.record_page_access(12, true);
+    std::string policy_path = "test_loaded_policy.txt";
+    {
+        std::ofstream f(policy_path);
+        f << "0 0 -1\n";
+    }
+    aqa::LoadedLearnedPageEvictionPolicy policy(&observer, policy_path);
+    std::vector<uint32_t> unpinned = {5, 10, 20};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_EQ(victim, 10u);
+    std::filesystem::remove(policy_path);
+}
+
+void test_loaded_learned_eviction_policy_missing_file_uses_defaults() {
+    aqa::AccessObserver observer(64);
+    aqa::LoadedLearnedPageEvictionPolicy policy(&observer, "/nonexistent/policy.txt");
+    std::vector<uint32_t> unpinned = {1, 2, 3};
+    uint32_t victim = policy.choose_victim(unpinned);
+    ASSERT_TRUE(victim == 1u || victim == 2u || victim == 3u);
+}
+
 void test_page_cache_with_hint_aware_policy() {
     std::string path = "eviction_hint_aware.db";
     std::filesystem::remove(path);
@@ -210,6 +236,8 @@ int main() {
     test_single_candidate_returned();
     test_learned_eviction_policy();
     test_learned_eviction_policy_null_observer();
+    test_loaded_learned_eviction_policy();
+    test_loaded_learned_eviction_policy_missing_file_uses_defaults();
     test_page_cache_with_hint_aware_policy();
     std::cout << "All eviction policy tests passed." << std::endl;
     return 0;

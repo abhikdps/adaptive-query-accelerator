@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -60,6 +61,7 @@ namespace aqa {
                                               size_t feedback_horizon = 64,
                                               double learning_rate = 0.05);
             uint32_t choose_victim(const std::vector<uint32_t>& unpinned_page_ids_lru_order) override;
+            void get_weights(double& w_recency, double& w_count, double& w_scan) const;
         private:
             struct Features { double recency{0}, count{0}, scan{0}; };
             Features extract_features(uint32_t page_id) const;
@@ -73,6 +75,20 @@ namespace aqa {
             std::optional<uint32_t> last_evicted_page_id_;
             Features last_evicted_features_;
             size_t last_eviction_total_{0};
+    };
+
+    class LoadedLearnedPageEvictionPolicy : public PageEvictionPolicy {
+        public:
+            explicit LoadedLearnedPageEvictionPolicy(AccessObserver* observer,
+                                                    const std::string& policy_file_path);
+            uint32_t choose_victim(const std::vector<uint32_t>& unpinned_page_ids_lru_order) override;
+        private:
+            struct Features { double recency{0}, count{0}, scan{0}; };
+            Features extract_features(uint32_t page_id) const;
+            double score(const Features& f) const;
+
+            AccessObserver* observer_;
+            double w_recency_{1.0}, w_count_{1.0}, w_scan_{-1.0};
     };
 
     class RecordEvictionPolicy {

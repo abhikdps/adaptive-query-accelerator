@@ -1,6 +1,8 @@
 #include "cache/eviction_policy.h"
 #include "observer/access_observer.h"
 #include "workload_hint.h"
+#include <fstream>
+#include <sstream>
 
 namespace aqa {
 
@@ -174,6 +176,71 @@ namespace aqa {
         last_evicted_page_id_ = victim;
         last_evicted_features_ = victim_features;
         last_eviction_total_ = observer_->get_total_recorded();
+        return victim;
+    }
+
+    void LearnedPageEvictionPolicy::get_weights(double& w_recency, double& w_count, double& w_scan) const {
+        w_recency = w_recency_;
+        w_count = w_count_;
+        w_scan = w_scan_;
+    }
+
+    static bool load_weights_from_file(const std::string& path, double& w_recency, double& w_count, double& w_scan) {
+        std::ifstream f(path);
+        if (!f) return false;
+        std::string line;
+        while (std::getline(f, line)) {
+            if (line.empty() || line[0] == '#') continue;
+            std::istringstream iss(line);
+            if (iss >> w_recency >> w_count >> w_scan) return true;
+            return false;
+        }
+        return false;
+    }
+
+    LoadedLearnedPageEvictionPolicy::LoadedLearnedPageEvictionPolicy(AccessObserver* observer,
+                                                                     const std::string& policy_file_path) {
+        observer_ = observer;
+        if (!load_weights_from_file(policy_file_path, w_recency_, w_count_, w_scan_)) {
+            w_recency_ = 1.0;
+            w_count_ = 1.0;
+            w_scan_ = -1.0;
+        }
+    }
+
+    LoadedLearnedPageEvictionPolicy::Features LoadedLearnedPageEvictionPolicy::extract_features(uint32_t page_id) const {
+        Features f;
+        if (!observer_) return f;
+        size_t cap = observer_->get_capacity();
+        size_t last_idx = observer_->get_last_index_in_recent(page_id);
+        f.recency = 1.0 / (1.0 + static_cast<double>(last_idx));
+        uint64_t cnt = observer_->get_access_count(page_id);
+        f.count = std::min(1.0, static_cast<double>(cnt) / (1.0 + static_cast<double>(cap)));
+        std::vector<uint32_t> recent = observer_->get_recent_page_ids(cap);
+        std::unordered_set<uint32_t> recent_set(recent.begin(), recent.end());
+        f.scan = ((recent_set.count(page_id + 1) != 0) || (page_id > 0 && recent_set.count(page_id - 1) != 0)) ? 1.0 : 0.0;
+        return f;
+    }
+
+    double LoadedLearnedPageEvictionPolicy::score(const Features& f) const {
+        return w_recency_ * f.recency + w_count_ * f.count + w_scan_ * f.scan;
+    }
+
+    uint32_t LoadedLearnedPageEvictionPolicy::choose_victim(
+        const std::vector<uint32_t>& unpinned_page_ids_lru_order) {
+        if (unpinned_page_ids_lru_order.empty()) return 0;
+        if (!observer_) return unpinned_page_ids_lru_order.front();
+
+        uint32_t victim = unpinned_page_ids_lru_order.front();
+        double min_score = score(extract_features(victim));
+        for (size_t i = 1; i < unpinned_page_ids_lru_order.size(); ++i) {
+            uint32_t pid = unpinned_page_ids_lru_order[i];
+            double s = score(extract_features(pid));
+            if (s < min_score) {
+                min_score = s;
+                victim = pid;
+            }
+        }
         return victim;
     }
 
